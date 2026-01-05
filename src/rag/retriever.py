@@ -1,10 +1,12 @@
 """
 FileName    : retriever.py
-Auth        : 작성자
+Auth        : 조남웅
 Date        : 2026-01-05
 Description : 심리상담 & 명언 챗봇용 Retriever 구현
               VectorDB에서 문서를 검색하여 RAG에 전달하는 역할
 Issue/Note  : 초기 구현
+              VectorDB(ChromaDB) 정상 로드 및 문서 수 출력 확인
+              similarity 기반 Retriever 동작 검증
 """
 
 # -------------------------------------------------------------
@@ -21,7 +23,7 @@ from src.database.vector_store import VectorStore
 # -------------------------------------------------------------
 
 DEFAULT_TOP_K = 5
-DEFAULT_SEARCH_TYPE = "similarity"  # 현재는 similarity만 지원
+DEFAULT_SEARCH_TYPE = "similarity" 
 
 
 # -------------------------------------------------------------
