@@ -462,6 +462,305 @@ def api_session():
 
 
 # =============================================================
+# Recent Chats API
+# =============================================================
+
+@app.route('/api/recent-chats', methods=['GET'])
+def api_recent_chats():
+    """
+    사용자의 최근 채팅 세션 목록 조회 API
+    
+    Returns:
+        - success: 성공 여부
+        - chats: 최근 채팅 세션 목록 [{id, title, date, started_at}, ...]
+    """
+    # 로그인 확인
+    if 'user' not in session:
+        return jsonify({
+            'success': False,
+            'chats': [],
+            'message': '로그인이 필요합니다'
+        }), 401
+    
+    # RAG 시스템 사용 가능 여부 확인
+    if db_manager is None:
+        return jsonify({
+            'success': True,
+            'chats': [],
+            'message': 'RAG 시스템이 초기화되지 않았습니다'
+        })
+    
+    try:
+        user_info = session['user']
+        
+        # RAG DB에서 사용자 조회
+        db_user = db_manager.get_user_by_username(user_info['username'])
+        
+        if db_user is None:
+            return jsonify({
+                'success': True,
+                'chats': [],
+                'message': '채팅 기록이 없습니다'
+            })
+        
+        # 최근 채팅 세션 조회
+        recent_chats = db_manager.get_user_recent_sessions(db_user.id, limit=5)
+        
+        return jsonify({
+            'success': True,
+            'chats': recent_chats
+        })
+        
+    except Exception as e:
+        print(f"[Error] 최근 채팅 조회 중 오류: {e}")
+        return jsonify({
+            'success': False,
+            'chats': [],
+            'message': f'조회 중 오류가 발생했습니다: {str(e)}'
+        }), 500
+
+
+@app.route('/api/new-session', methods=['POST'])
+def api_new_session():
+    """
+    새 채팅 세션 시작 API
+    현재 세션을 초기화하고 새 세션을 시작할 준비를 함
+    
+    Returns:
+        - success: 성공 여부
+        - message: 결과 메시지
+    """
+    # 로그인 확인
+    if 'user' not in session:
+        return jsonify({
+            'success': False,
+            'message': '로그인이 필요합니다'
+        }), 401
+    
+    try:
+        # Flask 세션에서 현재 채팅 세션 ID 제거
+        session.pop('chat_session_id', None)
+        
+        return jsonify({
+            'success': True,
+            'message': '새 대화가 시작되었습니다'
+        })
+        
+    except Exception as e:
+        print(f"[Error] 새 세션 생성 중 오류: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'새 세션 생성 중 오류가 발생했습니다: {str(e)}'
+        }), 500
+
+
+@app.route('/api/delete-session/<int:session_id>', methods=['DELETE'])
+def api_delete_session(session_id):
+    """
+    채팅 세션 삭제 API
+    
+    Args:
+        session_id: 삭제할 세션 ID
+        
+    Returns:
+        - success: 성공 여부
+        - message: 결과 메시지
+    """
+    # 로그인 확인
+    if 'user' not in session:
+        return jsonify({
+            'success': False,
+            'message': '로그인이 필요합니다'
+        }), 401
+    
+    if db_manager is None:
+        return jsonify({
+            'success': False,
+            'message': 'RAG 시스템이 초기화되지 않았습니다'
+        })
+    
+    try:
+        user_info = session['user']
+        db_user = db_manager.get_user_by_username(user_info['username'])
+        
+        if db_user is None:
+            return jsonify({
+                'success': False,
+                'message': '사용자를 찾을 수 없습니다'
+            }), 404
+        
+        # 세션 조회 및 소유권 확인
+        chat_session = db_manager.get_chat_session(session_id)
+        
+        if chat_session is None or chat_session.user_id != db_user.id:
+            return jsonify({
+                'success': False,
+                'message': '채팅 세션을 찾을 수 없습니다'
+            }), 404
+        
+        # 세션 삭제 (메시지도 함께 삭제됨 - cascade)
+        db_manager.delete_chat_session(session_id)
+        
+        # 현재 활성 세션이 삭제되었다면 세션 초기화
+        if session.get('chat_session_id') == session_id:
+            session.pop('chat_session_id', None)
+        
+        return jsonify({
+            'success': True,
+            'message': '대화가 삭제되었습니다'
+        })
+        
+    except Exception as e:
+        print(f"[Error] 세션 삭제 중 오류: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'삭제 중 오류가 발생했습니다: {str(e)}'
+        }), 500
+
+
+@app.route('/api/chat-history/<int:session_id>', methods=['GET'])
+def api_chat_history(session_id):
+    """
+    특정 채팅 세션의 대화 기록 조회 API
+    
+    Args:
+        session_id: 채팅 세션 ID
+        
+    Returns:
+        - success: 성공 여부
+        - messages: 메시지 목록 [{role, content, created_at}, ...]
+    """
+    # 로그인 확인
+    if 'user' not in session:
+        return jsonify({
+            'success': False,
+            'messages': [],
+            'message': '로그인이 필요합니다'
+        }), 401
+    
+    if db_manager is None:
+        return jsonify({
+            'success': False,
+            'messages': [],
+            'message': 'RAG 시스템이 초기화되지 않았습니다'
+        })
+    
+    try:
+        user_info = session['user']
+        db_user = db_manager.get_user_by_username(user_info['username'])
+        
+        if db_user is None:
+            return jsonify({
+                'success': False,
+                'messages': [],
+                'message': '사용자를 찾을 수 없습니다'
+            }), 404
+        
+        # 세션 조회 및 소유권 확인
+        chat_session = db_manager.get_chat_session(session_id)
+        
+        if chat_session is None or chat_session.user_id != db_user.id:
+            return jsonify({
+                'success': False,
+                'messages': [],
+                'message': '채팅 세션을 찾을 수 없습니다'
+            }), 404
+        
+        # 채팅 기록 조회
+        messages = db_manager.get_chat_history(session_id)
+        
+        messages_data = [{
+            'role': msg.role,
+            'content': msg.content,
+            'created_at': msg.created_at.isoformat() if msg.created_at else None
+        } for msg in messages]
+        
+        return jsonify({
+            'success': True,
+            'session_id': session_id,
+            'messages': messages_data
+        })
+        
+    except Exception as e:
+        print(f"[Error] 채팅 기록 조회 중 오류: {e}")
+        return jsonify({
+            'success': False,
+            'messages': [],
+            'message': f'조회 중 오류가 발생했습니다: {str(e)}'
+        }), 500
+
+
+@app.route('/api/switch-session', methods=['POST'])
+def api_switch_session():
+    """
+    활성 채팅 세션 전환 API
+    
+    Request Body:
+        - session_id: 전환할 세션 ID
+        
+    Returns:
+        - success: 성공 여부
+        - session_id: 전환된 세션 ID
+    """
+    # 로그인 확인
+    if 'user' not in session:
+        return jsonify({
+            'success': False,
+            'message': '로그인이 필요합니다'
+        }), 401
+    
+    data = request.get_json()
+    new_session_id = data.get('session_id')
+    
+    if not new_session_id:
+        return jsonify({
+            'success': False,
+            'message': '세션 ID가 필요합니다'
+        }), 400
+    
+    if db_manager is None:
+        return jsonify({
+            'success': False,
+            'message': 'RAG 시스템이 초기화되지 않았습니다'
+        })
+    
+    try:
+        user_info = session['user']
+        db_user = db_manager.get_user_by_username(user_info['username'])
+        
+        if db_user is None:
+            return jsonify({
+                'success': False,
+                'message': '사용자를 찾을 수 없습니다'
+            }), 404
+        
+        # 세션 조회 및 소유권 확인
+        chat_session = db_manager.get_chat_session(new_session_id)
+        
+        if chat_session is None or chat_session.user_id != db_user.id:
+            return jsonify({
+                'success': False,
+                'message': '채팅 세션을 찾을 수 없습니다'
+            }), 404
+        
+        # Flask 세션에 chat_session_id 업데이트
+        session['chat_session_id'] = new_session_id
+        
+        return jsonify({
+            'success': True,
+            'session_id': new_session_id,
+            'message': '세션이 전환되었습니다'
+        })
+        
+    except Exception as e:
+        print(f"[Error] 세션 전환 중 오류: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'세션 전환 중 오류가 발생했습니다: {str(e)}'
+        }), 500
+
+
+# =============================================================
 # Chat & Survey API Routes
 # =============================================================
 
