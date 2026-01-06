@@ -16,7 +16,21 @@ from datetime import datetime
 import bcrypt
 import sqlite3
 import os
+import sys
 from pathlib import Path
+
+# RAG 시스템 임포트를 위한 경로 설정
+PROJECT_ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
+# RAG 시스템 모듈 임포트
+try:
+    from src.rag.chain import RAGChain
+    from src.database.db_manager import DatabaseManager
+    RAG_AVAILABLE = True
+except ImportError as e:
+    print(f"[Warning] RAG 시스템 로드 실패: {e}")
+    RAG_AVAILABLE = False
 
 # -------------------------------------------------------------
 # Flask App Configuration
@@ -87,6 +101,21 @@ def init_database():
 
 # 앱 시작 시 데이터베이스 초기화
 init_database()
+
+# RAG 시스템 초기화
+rag_chain = None
+db_manager = None
+
+if RAG_AVAILABLE:
+    try:
+        db_manager = DatabaseManager(echo=False)
+        rag_chain = RAGChain(db_manager=db_manager)
+        print("[INFO] RAG 시스템 초기화 완료")
+    except Exception as e:
+        print(f"[Warning] RAG 시스템 초기화 실패: {e}")
+        rag_chain = None
+else:
+    print("[Warning] RAG 모듈을 사용할 수 없습니다. 데모 모드로 실행합니다.")
 
 
 # =============================================================
@@ -439,19 +468,73 @@ def api_session():
 @app.route('/api/chat', methods=['POST'])
 def api_chat():
     """채팅 API - RAG 시스템 연동"""
+    # 로그인 확인
+    if 'user' not in session:
+        return jsonify({
+            'success': False,
+            'message': '로그인이 필요합니다'
+        }), 401
+    
     data = request.get_json()
-    message = data.get('message')
+    message = data.get('message', '').strip()
     
-    # TODO: RAG 시스템 연동
-    # response = rag_system.generate_response(message)
+    if not message:
+        return jsonify({
+            'success': False,
+            'message': '메시지를 입력해주세요'
+        }), 400
     
-    # Demo response
-    response = "안녕하세요! 심리 상담 AI입니다. 무엇을 도와드릴까요?"
+    user_info = session['user']
+    user_id = user_info.get('id')
     
-    return jsonify({
-        'success': True,
-        'response': response
-    })
+    # RAG 시스템 사용 가능 여부 확인
+    if rag_chain is None:
+        # 데모 모드 응답
+        return jsonify({
+            'success': True,
+            'response': "안녕하세요! 심리 상담 AI입니다. 현재 데모 모드로 실행 중입니다. RAG 시스템이 준비되면 더 나은 상담을 받으실 수 있습니다.",
+            'demo_mode': True
+        })
+    
+    try:
+        # 세션 ID 관리 (Flask 세션에 chat_session_id 저장)
+        chat_session_id = session.get('chat_session_id')
+        
+        if chat_session_id is None:
+            # 새 채팅 세션 생성
+            # DatabaseManager의 user와 Flask session의 user 동기화
+            db_user = db_manager.get_user_by_username(user_info['username'])
+            if db_user is None:
+                # RAG DB에 사용자가 없으면 생성
+                db_user = db_manager.create_user(user_info['username'])
+            
+            # 새 채팅 세션 생성
+            chat_session = db_manager.create_chat_session(db_user.id)
+            chat_session_id = chat_session.id
+            session['chat_session_id'] = chat_session_id
+            user_id = db_user.id
+        else:
+            # 기존 세션 사용
+            db_user = db_manager.get_user_by_username(user_info['username'])
+            if db_user:
+                user_id = db_user.id
+        
+        # RAG 시스템으로 응답 생성
+        response = rag_chain.run(user_id, chat_session_id, message)
+        
+        return jsonify({
+            'success': True,
+            'response': response,
+            'session_id': chat_session_id
+        })
+        
+    except Exception as e:
+        print(f"[Error] 채팅 처리 중 오류: {e}")
+        return jsonify({
+            'success': False,
+            'message': '죄송합니다. 응답 생성 중 오류가 발생했습니다.',
+            'error': str(e)
+        }), 500
 
 
 @app.route('/api/survey', methods=['POST'])

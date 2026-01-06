@@ -142,7 +142,7 @@ document.addEventListener('DOMContentLoaded', function () {
     /**
      * Send user message and get bot response
      */
-    function sendMessage() {
+    async function sendMessage() {
         const text = messageInput.value.trim();
         if (!text) return;
 
@@ -153,12 +153,30 @@ document.addEventListener('DOMContentLoaded', function () {
         // Show typing indicator
         showTypingIndicator();
 
-        // Simulate bot response
-        setTimeout(() => {
+        try {
+            // Call RAG API
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ message: text })
+            });
+
+            const data = await response.json();
             hideTypingIndicator();
-            const randomResponse = botResponses[Math.floor(Math.random() * botResponses.length)];
-            addMessage(randomResponse, 'bot');
-        }, 1000 + Math.random() * 1000);
+
+            if (data.success) {
+                addMessage(data.response, 'bot');
+            } else {
+                // Error response
+                addMessage(data.message || '죄송합니다. 응답을 생성하는 중 오류가 발생했습니다.', 'bot');
+            }
+        } catch (error) {
+            console.error('Chat API 오류:', error);
+            hideTypingIndicator();
+            addMessage('죄송합니다. 서버와 연결할 수 없습니다. 잠시 후 다시 시도해주세요.', 'bot');
+        }
     }
 
     /**
@@ -182,7 +200,7 @@ document.addEventListener('DOMContentLoaded', function () {
             </div>
         ` : `
             <div class="message bot-message">
-                <div class="message-avatar">🤖</div>
+                <div class="message-avatar"><img src="/static/images/icon.jpg" alt="Bot"></div>
                 <div class="message-content">
                     <div class="message-bubble">
                         <p>${escapeHtml(text)}</p>
@@ -224,7 +242,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function showTypingIndicator() {
         const typingHTML = `
             <div class="message bot-message" id="typing-indicator">
-                <div class="message-avatar">🤖</div>
+                <div class="message-avatar"><img src="/static/images/icon.jpg" alt="Bot"></div>
                 <div class="message-content">
                     <div class="typing-indicator">
                         <span></span>
