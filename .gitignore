@@ -43,6 +43,7 @@ env/
 
 # Vector DB
 chroma_db/
+data/vector_store/
 *.index
 
 # Data (큰 파일은 Git에서 제외)
@@ -51,6 +52,7 @@ data/raw/*.json
 data/raw/*.txt
 data/processed/*.pkl
 data/processed/*.parquet
+data/processed/*.jsonl
 
 # Logs
 logs/
