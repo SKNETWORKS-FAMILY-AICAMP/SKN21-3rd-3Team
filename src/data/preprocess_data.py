@@ -1,5 +1,5 @@
 """
-FileName    : preprocess_data_ys.py
+FileName    : preprocess_data.py
 Auth        : 장이선
 Date        : 2026-01-06
 Description : 원본 txt/json 데이터 전처리
@@ -392,23 +392,14 @@ def main(txt_root, json_root, out_dir, window: int = 1):
     with open(os.path.join(out_dir, "docs_summary.txt"), "w", encoding="utf-8") as f:
         f.write("\n".join(summary_lines))
 
-# --- quick debug (임시) ---
-if False:
-    test_path = r"..\01.원천데이터\TS_003. 중독_0001. 1회기\resource_addiction_1_check_A008.txt"
-    t = read_text_file(test_path)
-    c = chunk_dialogue(t)
-    print("DEBUG chunks:", len(c))
-    print(c[:3])
-
-
 # -------------------------------------------------------------
 # STEP 7. CLI entrypoint
 # -------------------------------------------------------------
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--txt_root", required=True)
-    parser.add_argument("--json_root", required=True)
+    parser.add_argument("--txt_root", default="data/raw/16.심리상담 데이터/3.개방데이터/1.데이터/Training/01.원천데이터")
+    parser.add_argument("--json_root", default="data/raw/16.심리상담 데이터/3.개방데이터/1.데이터/Training/02.라벨링데이터")
     parser.add_argument("--out_dir", default="output")
     parser.add_argument("--window", type=int, default=1)
 
