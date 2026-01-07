@@ -1216,3 +1216,23 @@ body {
         box-shadow: 0 0 8px var(--accent-primary);
     }
 }
+
+/* Streaming/Typing Cursor */
+.typing-cursor {
+    color: var(--accent-primary);
+    animation: blink 0.7s infinite;
+    font-weight: normal;
+}
+
+@keyframes blink {
+    0%, 50% {
+        opacity: 1;
+    }
+    51%, 100% {
+        opacity: 0;
+    }
+}
+
+.streaming-text {
+    min-height: 1.2em;
+}

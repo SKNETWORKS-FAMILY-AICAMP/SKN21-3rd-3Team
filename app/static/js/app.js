@@ -417,7 +417,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     /**
-     * Send user message and get bot response
+     * Send user message and get bot response (with streaming)
      */
     async function sendMessage() {
         const text = messageInput.value.trim();
@@ -427,12 +427,13 @@ document.addEventListener('DOMContentLoaded', function () {
         addMessage(text, 'user');
         messageInput.value = '';
 
-        // Show typing indicator
-        showTypingIndicator();
+        // Create bot message placeholder for streaming
+        const botMessageId = 'streaming-msg-' + Date.now();
+        createStreamingBotMessage(botMessageId);
 
         try {
-            // Call RAG API
-            const response = await fetch('/api/chat', {
+            // Call streaming API
+            const response = await fetch('/api/chat/stream', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -440,19 +441,136 @@ document.addEventListener('DOMContentLoaded', function () {
                 body: JSON.stringify({ message: text })
             });
 
-            const data = await response.json();
-            hideTypingIndicator();
-
-            if (data.success) {
-                addMessage(data.response, 'bot');
-            } else {
-                // Error response
-                addMessage(data.message || '죄송합니다. 응답을 생성하는 중 오류가 발생했습니다.', 'bot');
+            if (!response.ok) {
+                const errorData = await response.json();
+                updateStreamingMessage(botMessageId, errorData.message || '오류가 발생했습니다.');
+                finalizeStreamingMessage(botMessageId);
+                return;
             }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let fullText = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const data = line.slice(6);
+                        
+                        if (data === '[DONE]') {
+                            // Streaming complete
+                            finalizeStreamingMessage(botMessageId);
+                        } else if (data.startsWith('[ERROR]')) {
+                            // Error occurred
+                            updateStreamingMessage(botMessageId, data.slice(7).trim());
+                            finalizeStreamingMessage(botMessageId);
+                        } else {
+                            // Append character
+                            fullText += data;
+                            updateStreamingMessage(botMessageId, fullText);
+                        }
+                    }
+                }
+            }
+
         } catch (error) {
             console.error('Chat API 오류:', error);
-            hideTypingIndicator();
-            addMessage('죄송합니다. 서버와 연결할 수 없습니다. 잠시 후 다시 시도해주세요.', 'bot');
+            updateStreamingMessage(botMessageId, '죄송합니다. 서버와 연결할 수 없습니다.');
+            finalizeStreamingMessage(botMessageId);
+        }
+    }
+
+    /**
+     * Create a placeholder bot message for streaming
+     */
+    function createStreamingBotMessage(messageId) {
+        const time = new Date().toLocaleTimeString('ko-KR', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+
+        const messageHTML = `
+            <div class="message bot-message" id="${messageId}">
+                <div class="message-avatar"><img src="/static/images/icon.jpg" alt="Bot"></div>
+                <div class="message-content">
+                    <div class="message-bubble">
+                        <p class="streaming-text"><span class="typing-cursor">▊</span></p>
+                    </div>
+                    <span class="message-time">${time}</span>
+                </div>
+            </div>
+        `;
+
+        chatMessages.insertAdjacentHTML('beforeend', messageHTML);
+        scrollToBottom();
+    }
+
+    /**
+     * Update the streaming message with new text
+     */
+    function updateStreamingMessage(messageId, text) {
+        const messageEl = document.getElementById(messageId);
+        if (messageEl) {
+            const textEl = messageEl.querySelector('.streaming-text');
+            if (textEl) {
+                textEl.innerHTML = escapeHtml(text) + '<span class="typing-cursor">▊</span>';
+            }
+            scrollToBottom();
+        }
+    }
+
+    /**
+     * Finalize the streaming message (remove cursor, add actions)
+     */
+    function finalizeStreamingMessage(messageId) {
+        const messageEl = document.getElementById(messageId);
+        if (messageEl) {
+            // Remove typing cursor
+            const cursor = messageEl.querySelector('.typing-cursor');
+            if (cursor) cursor.remove();
+
+            // Add message actions
+            const contentEl = messageEl.querySelector('.message-content');
+            const timeEl = messageEl.querySelector('.message-time');
+            
+            const actionsHTML = `
+                <div class="message-actions">
+                    <button class="msg-action" title="복사">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                    </button>
+                    <button class="msg-action" title="공유">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="18" cy="5" r="3"></circle>
+                            <circle cx="6" cy="12" r="3"></circle>
+                            <circle cx="18" cy="19" r="3"></circle>
+                            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                        </svg>
+                    </button>
+                    <button class="msg-action" title="좋아요">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
+                        </svg>
+                    </button>
+                </div>
+            `;
+            
+            if (contentEl && timeEl) {
+                contentEl.insertBefore(
+                    document.createRange().createContextualFragment(actionsHTML),
+                    timeEl
+                );
+            }
         }
     }
 

@@ -836,6 +836,103 @@ def api_chat():
         }), 500
 
 
+@app.route('/api/chat/stream', methods=['POST'])
+def api_chat_stream():
+    """스트리밍 채팅 API - Server-Sent Events(SSE) 사용"""
+    from flask import Response
+    import time
+    
+    # 로그인 확인
+    if 'user' not in session:
+        return jsonify({
+            'success': False,
+            'message': '로그인이 필요합니다'
+        }), 401
+    
+    data = request.get_json()
+    message = data.get('message', '').strip()
+    
+    if not message:
+        return jsonify({
+            'success': False,
+            'message': '메시지를 입력해주세요'
+        }), 400
+    
+    # 세션 데이터를 미리 복사 (제너레이터 안에서는 요청 컨텍스트 사용 불가)
+    user_info = dict(session['user'])
+    chat_session_id = session.get('chat_session_id')
+    
+    def generate_stream():
+        """SSE 스트림 생성"""
+        nonlocal chat_session_id
+        
+        # RAG 시스템 사용 가능 여부 확인
+        if rag_chain is None:
+            demo_response = "안녕하세요! 심리 상담 AI입니다. 현재 데모 모드로 실행 중입니다."
+            for char in demo_response:
+                yield f"data: {char}\n\n"
+                time.sleep(0.03)
+            yield "data: [DONE]\n\n"
+            return
+        
+        try:
+            user_id = user_info.get('id')
+            
+            # 세션 ID 관리
+            if chat_session_id is None:
+                db_user = db_manager.get_user_by_username(user_info['username'])
+                if db_user is None:
+                    db_user = db_manager.create_user(user_info['username'])
+                
+                chat_session_obj = db_manager.create_chat_session(db_user.id)
+                chat_session_id = chat_session_obj.id
+                user_id = db_user.id
+            else:
+                db_user = db_manager.get_user_by_username(user_info['username'])
+                if db_user:
+                    user_id = db_user.id
+            
+            # RAG 시스템으로 응답 생성
+            response = rag_chain.run(user_id, chat_session_id, message)
+            
+            # 응답을 한 글자씩 스트리밍
+            for char in response:
+                yield f"data: {char}\n\n"
+                # 자연스러운 타이핑 효과를 위한 딜레이
+                if char in '.!?':
+                    time.sleep(0.08)  # 문장 끝에서 잠깐 멈춤
+                elif char in ',;:':
+                    time.sleep(0.05)  # 쉼표 등에서 약간 멈춤
+                else:
+                    time.sleep(0.02)  # 일반 문자
+            
+            yield "data: [DONE]\n\n"
+            
+        except Exception as e:
+            print(f"[Error] 스트리밍 채팅 오류: {e}")
+            yield f"data: [ERROR] 응답 생성 중 오류가 발생했습니다.\n\n"
+    
+    # 세션 ID 업데이트를 위해 응답 후 콜백으로 처리하지 않고,
+    # 새 세션이 필요한 경우 미리 생성
+    if chat_session_id is None and rag_chain is not None and db_manager is not None:
+        db_user = db_manager.get_user_by_username(user_info['username'])
+        if db_user is None:
+            db_user = db_manager.create_user(user_info['username'])
+        chat_session_obj = db_manager.create_chat_session(db_user.id)
+        chat_session_id = chat_session_obj.id
+        session['chat_session_id'] = chat_session_id
+    
+    return Response(
+        generate_stream(),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'X-Accel-Buffering': 'no'
+        }
+    )
+
+
 @app.route('/api/survey', methods=['POST'])
 def api_survey():
     """설문 결과 저장 API"""
