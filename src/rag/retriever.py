@@ -49,18 +49,36 @@ DEFAULT_SEARCH_TYPE = "similarity"
 def load_vector_db(persist_directory: Optional[str] = None) -> VectorStore:
     """
     VectorStore(ChromaDB) 로드
-
-    Args:
-        persist_directory: ChromaDB 경로 (None이면 기본 경로)
-
-    Returns:
-        VectorStore 인스턴스
+    - 기존 컬렉션 중 문서가 있는 컬렉션을 사용
     """
+
     vector_db = VectorStore(persist_directory=persist_directory)
 
-    count = vector_db.get_document_count()
+    client = vector_db.client
+
+    collections = client.list_collections()
+
+    if not collections:
+        print("[ERROR] No collections found in vector store")
+        return vector_db
+
+    # 문서가 있는 컬렉션 찾기
+    selected = None
+    for col in collections:
+        col_obj = client.get_collection(name=col.name)
+        count = col_obj.count()
+        print(f"[INFO] Found collection: {col.name}, documents: {count}")
+        if count > 0 and selected is None:
+            selected = col_obj
+
+    if selected:
+        vector_db.collection = selected
+        print(f"[INFO] Using collection: {selected.name}")
+        print(f"[INFO] Total documents: {selected.count()}")
+    else:
+        print("[WARN] All collections are empty")
+
     print("[INFO] VectorDB loaded")
-    print(f"[INFO] Total documents: {count}")
 
     return vector_db
 
