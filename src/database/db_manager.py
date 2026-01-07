@@ -336,14 +336,29 @@ class DatabaseManager:
         recommended_action: Optional[str] = None
     ) -> ExpertReferral:
         """
-        전문가 연결 기록 생성
+        전문가 연결 기록 생성 또는 업데이트
+        - 동일 session_id에 대해 기존 레코드가 있으면 업데이트
+        - 없으면 새로 생성
         """
-        referral = ExpertReferral(
-            session_id=session_id,
-            severity_level=severity_level,
-            recommended_action=recommended_action
-        )
-        self.session.add(referral)
+        # 기존 레코드 확인
+        existing = self.session.query(ExpertReferral).filter(
+            ExpertReferral.session_id == session_id
+        ).first()
+        
+        if existing:
+            # 기존 레코드 업데이트
+            existing.severity_level = severity_level
+            if recommended_action:
+                existing.recommended_action = recommended_action
+            referral = existing
+        else:
+            # 새 레코드 생성
+            referral = ExpertReferral(
+                session_id=session_id,
+                severity_level=severity_level,
+                recommended_action=recommended_action
+            )
+            self.session.add(referral)
         
         # 세션 상태 업데이트
         chat_session = self.get_chat_session(session_id)
