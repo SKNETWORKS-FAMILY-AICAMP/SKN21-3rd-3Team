@@ -417,7 +417,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     /**
-     * Send user message and get bot response
+     * Send user message and get bot response (with streaming)
      */
     async function sendMessage() {
         const text = messageInput.value.trim();
@@ -427,12 +427,13 @@ document.addEventListener('DOMContentLoaded', function () {
         addMessage(text, 'user');
         messageInput.value = '';
 
-        // Show typing indicator
-        showTypingIndicator();
+        // Create bot message placeholder for streaming
+        const botMessageId = 'streaming-msg-' + Date.now();
+        createStreamingBotMessage(botMessageId);
 
         try {
-            // Call RAG API
-            const response = await fetch('/api/chat', {
+            // Call streaming API
+            const response = await fetch('/api/chat/stream', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -440,19 +441,136 @@ document.addEventListener('DOMContentLoaded', function () {
                 body: JSON.stringify({ message: text })
             });
 
-            const data = await response.json();
-            hideTypingIndicator();
-
-            if (data.success) {
-                addMessage(data.response, 'bot');
-            } else {
-                // Error response
-                addMessage(data.message || '죄송합니다. 응답을 생성하는 중 오류가 발생했습니다.', 'bot');
+            if (!response.ok) {
+                const errorData = await response.json();
+                updateStreamingMessage(botMessageId, errorData.message || '오류가 발생했습니다.');
+                finalizeStreamingMessage(botMessageId);
+                return;
             }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let fullText = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                const lines = chunk.split('\n');
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const data = line.slice(6);
+                        
+                        if (data === '[DONE]') {
+                            // Streaming complete
+                            finalizeStreamingMessage(botMessageId);
+                        } else if (data.startsWith('[ERROR]')) {
+                            // Error occurred
+                            updateStreamingMessage(botMessageId, data.slice(7).trim());
+                            finalizeStreamingMessage(botMessageId);
+                        } else {
+                            // Append character
+                            fullText += data;
+                            updateStreamingMessage(botMessageId, fullText);
+                        }
+                    }
+                }
+            }
+
         } catch (error) {
             console.error('Chat API 오류:', error);
-            hideTypingIndicator();
-            addMessage('죄송합니다. 서버와 연결할 수 없습니다. 잠시 후 다시 시도해주세요.', 'bot');
+            updateStreamingMessage(botMessageId, '죄송합니다. 서버와 연결할 수 없습니다.');
+            finalizeStreamingMessage(botMessageId);
+        }
+    }
+
+    /**
+     * Create a placeholder bot message for streaming
+     */
+    function createStreamingBotMessage(messageId) {
+        const time = new Date().toLocaleTimeString('ko-KR', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+
+        const messageHTML = `
+            <div class="message bot-message" id="${messageId}">
+                <div class="message-avatar"><img src="/static/images/icon.jpg" alt="Bot"></div>
+                <div class="message-content">
+                    <div class="message-bubble">
+                        <p class="streaming-text"><span class="typing-cursor">▊</span></p>
+                    </div>
+                    <span class="message-time">${time}</span>
+                </div>
+            </div>
+        `;
+
+        chatMessages.insertAdjacentHTML('beforeend', messageHTML);
+        scrollToBottom();
+    }
+
+    /**
+     * Update the streaming message with new text
+     */
+    function updateStreamingMessage(messageId, text) {
+        const messageEl = document.getElementById(messageId);
+        if (messageEl) {
+            const textEl = messageEl.querySelector('.streaming-text');
+            if (textEl) {
+                textEl.innerHTML = escapeHtml(text) + '<span class="typing-cursor">▊</span>';
+            }
+            scrollToBottom();
+        }
+    }
+
+    /**
+     * Finalize the streaming message (remove cursor, add actions)
+     */
+    function finalizeStreamingMessage(messageId) {
+        const messageEl = document.getElementById(messageId);
+        if (messageEl) {
+            // Remove typing cursor
+            const cursor = messageEl.querySelector('.typing-cursor');
+            if (cursor) cursor.remove();
+
+            // Add message actions
+            const contentEl = messageEl.querySelector('.message-content');
+            const timeEl = messageEl.querySelector('.message-time');
+            
+            const actionsHTML = `
+                <div class="message-actions">
+                    <button class="msg-action" title="복사">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                    </button>
+                    <button class="msg-action" title="공유">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="18" cy="5" r="3"></circle>
+                            <circle cx="6" cy="12" r="3"></circle>
+                            <circle cx="18" cy="19" r="3"></circle>
+                            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                        </svg>
+                    </button>
+                    <button class="msg-action" title="좋아요">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
+                        </svg>
+                    </button>
+                </div>
+            `;
+            
+            if (contentEl && timeEl) {
+                contentEl.insertBefore(
+                    document.createRange().createContextualFragment(actionsHTML),
+                    timeEl
+                );
+            }
         }
     }
 
@@ -686,5 +804,307 @@ document.addEventListener('DOMContentLoaded', function () {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    // ========================================
+    // Chat Search Functionality
+    // ========================================
+    
+    const searchToggle = document.getElementById('search-toggle');
+    const searchOverlay = document.getElementById('search-overlay');
+    const searchInput = document.getElementById('search-input');
+    const searchResults = document.getElementById('search-results');
+    const searchClear = document.getElementById('search-clear');
+    const searchClose = document.getElementById('search-close');
+    const searchPrev = document.getElementById('search-prev');
+    const searchNext = document.getElementById('search-next');
+    const searchResultCount = document.getElementById('search-result-count');
+    
+    let searchResultItems = [];
+    let currentSearchIndex = 0;
+    
+    // Open search overlay
+    if (searchToggle) {
+        searchToggle.addEventListener('click', openSearch);
+    }
+    
+    // Close search overlay
+    if (searchClose) {
+        searchClose.addEventListener('click', closeSearch);
+    }
+    
+    // Click outside to close
+    if (searchOverlay) {
+        searchOverlay.addEventListener('click', function(e) {
+            if (e.target === searchOverlay) {
+                closeSearch();
+            }
+        });
+    }
+    
+    // Clear search input
+    if (searchClear) {
+        searchClear.addEventListener('click', function() {
+            searchInput.value = '';
+            searchClear.classList.remove('visible');
+            resetSearch();
+            searchInput.focus();
+        });
+    }
+    
+    // Search input handling
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const query = searchInput.value.trim();
+            if (query.length > 0) {
+                searchClear.classList.add('visible');
+                performSearch(query);
+            } else {
+                searchClear.classList.remove('visible');
+                resetSearch();
+            }
+        });
+        
+        // Keyboard navigation
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (e.shiftKey) {
+                    navigateSearch(-1);
+                } else {
+                    navigateSearch(1);
+                }
+            } else if (e.key === 'Escape') {
+                closeSearch();
+            }
+        });
+    }
+    
+    // Navigation buttons
+    if (searchPrev) {
+        searchPrev.addEventListener('click', function() {
+            navigateSearch(-1);
+        });
+    }
+    
+    if (searchNext) {
+        searchNext.addEventListener('click', function() {
+            navigateSearch(1);
+        });
+    }
+    
+    // Keyboard shortcut (Ctrl+F / Cmd+F)
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+            // Only intercept if chat view is visible
+            const chatMessagesEl = document.getElementById('chat-messages');
+            if (chatMessagesEl && chatMessagesEl.style.display !== 'none') {
+                e.preventDefault();
+                openSearch();
+            }
+        }
+    });
+    
+    function openSearch() {
+        if (searchOverlay) {
+            searchOverlay.classList.add('active');
+            searchInput.focus();
+        }
+    }
+    
+    function closeSearch() {
+        if (searchOverlay) {
+            searchOverlay.classList.remove('active');
+            searchInput.value = '';
+            searchClear.classList.remove('visible');
+            resetSearch();
+            clearHighlights();
+        }
+    }
+    
+    function resetSearch() {
+        searchResultItems = [];
+        currentSearchIndex = 0;
+        updateSearchNav();
+        searchResults.innerHTML = `
+            <div class="search-empty">
+                <span class="search-empty-icon">🔍</span>
+                <p>검색어를 입력하세요</p>
+            </div>
+        `;
+    }
+    
+    function performSearch(query) {
+        const chatMessagesEl = document.getElementById('chat-messages');
+        if (!chatMessagesEl) return;
+        
+        const messages = chatMessagesEl.querySelectorAll('.message');
+        searchResultItems = [];
+        
+        const lowerQuery = query.toLowerCase();
+        
+        messages.forEach((message, index) => {
+            const bubble = message.querySelector('.message-bubble');
+            if (!bubble) return;
+            
+            const text = bubble.innerText;
+            if (text.toLowerCase().includes(lowerQuery)) {
+                const isUser = message.classList.contains('user-message');
+                searchResultItems.push({
+                    element: message,
+                    text: text,
+                    isUser: isUser,
+                    index: index
+                });
+            }
+        });
+        
+        renderSearchResults(query);
+        updateSearchNav();
+        currentSearchIndex = 0;
+        
+        if (searchResultItems.length > 0) {
+            highlightCurrentResult();
+        }
+    }
+    
+    function renderSearchResults(query) {
+        if (searchResultItems.length === 0) {
+            searchResults.innerHTML = `
+                <div class="search-no-results">
+                    <span class="search-no-results-icon">😕</span>
+                    <p>"${escapeHtml(query)}" 검색 결과가 없습니다</p>
+                </div>
+            `;
+            return;
+        }
+        
+        const resultsHTML = searchResultItems.map((item, idx) => {
+            const highlightedText = highlightText(item.text, query);
+            const role = item.isUser ? '나' : 'AI 상담사';
+            const iconContent = item.isUser ? '👤' : '<img src="/static/images/icon.jpg" alt="Bot">';
+            const iconClass = item.isUser ? 'user' : 'bot';
+            
+            return `
+                <div class="search-result-item ${idx === currentSearchIndex ? 'active' : ''}" data-index="${idx}">
+                    <div class="search-result-icon ${iconClass}">${iconContent}</div>
+                    <div class="search-result-content">
+                        <div class="search-result-role">${role}</div>
+                        <div class="search-result-text">${highlightedText}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        searchResults.innerHTML = resultsHTML;
+        
+        // Add click handlers
+        searchResults.querySelectorAll('.search-result-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const idx = parseInt(this.dataset.index);
+                const targetElement = searchResultItems[idx].element;
+                
+                // Close search overlay first
+                closeSearch();
+                
+                // Scroll to message and highlight after a brief delay
+                setTimeout(() => {
+                    if (targetElement) {
+                        targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        
+                        // Add highlight effect
+                        targetElement.classList.add('search-found');
+                        targetElement.style.outline = '3px solid var(--accent-primary)';
+                        targetElement.style.outlineOffset = '6px';
+                        targetElement.style.borderRadius = 'var(--radius-md)';
+                        
+                        // Remove highlight after animation
+                        setTimeout(() => {
+                            targetElement.classList.remove('search-found');
+                            targetElement.style.outline = '';
+                            targetElement.style.outlineOffset = '';
+                        }, 2000);
+                    }
+                }, 100);
+            });
+        });
+    }
+    
+    function highlightText(text, query) {
+        const escaped = escapeHtml(text);
+        const escapedQuery = escapeHtml(query);
+        const regex = new RegExp(`(${escapedQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        return escaped.replace(regex, '<mark>$1</mark>');
+    }
+    
+    function updateSearchNav() {
+        const count = searchResultItems.length;
+        
+        if (count > 0) {
+            searchResultCount.textContent = `${currentSearchIndex + 1} / ${count}개 결과`;
+            searchPrev.disabled = false;
+            searchNext.disabled = false;
+        } else {
+            searchResultCount.textContent = '';
+            searchPrev.disabled = true;
+            searchNext.disabled = true;
+        }
+    }
+    
+    function navigateSearch(direction) {
+        if (searchResultItems.length === 0) return;
+        
+        currentSearchIndex += direction;
+        
+        if (currentSearchIndex >= searchResultItems.length) {
+            currentSearchIndex = 0;
+        } else if (currentSearchIndex < 0) {
+            currentSearchIndex = searchResultItems.length - 1;
+        }
+        
+        highlightCurrentResult();
+        scrollToMessage(searchResultItems[currentSearchIndex].element);
+        updateActiveResult();
+        updateSearchNav();
+    }
+    
+    function updateActiveResult() {
+        searchResults.querySelectorAll('.search-result-item').forEach((item, idx) => {
+            item.classList.toggle('active', idx === currentSearchIndex);
+        });
+        
+        // Scroll active result into view in results panel
+        const activeItem = searchResults.querySelector('.search-result-item.active');
+        if (activeItem) {
+            activeItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+    }
+    
+    function highlightCurrentResult() {
+        clearHighlights();
+        
+        if (searchResultItems.length === 0) return;
+        
+        const currentItem = searchResultItems[currentSearchIndex];
+        if (currentItem && currentItem.element) {
+            currentItem.element.classList.add('search-current');
+            currentItem.element.style.outline = '2px solid var(--accent-primary)';
+            currentItem.element.style.outlineOffset = '4px';
+            currentItem.element.style.borderRadius = 'var(--radius-md)';
+        }
+    }
+    
+    function clearHighlights() {
+        document.querySelectorAll('.message.search-current').forEach(el => {
+            el.classList.remove('search-current');
+            el.style.outline = '';
+            el.style.outlineOffset = '';
+        });
+    }
+    
+    function scrollToMessage(element) {
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
     }
 });
