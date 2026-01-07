@@ -400,7 +400,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--txt_root", default="data/raw/16.심리상담 데이터/3.개방데이터/1.데이터/Training/01.원천데이터")
     parser.add_argument("--json_root", default="data/raw/16.심리상담 데이터/3.개방데이터/1.데이터/Training/02.라벨링데이터")
-    parser.add_argument("--out_dir", default="output")
+    parser.add_argument("--out_dir", default="data/processed")
     parser.add_argument("--window", type=int, default=1)
 
     args = parser.parse_args()
