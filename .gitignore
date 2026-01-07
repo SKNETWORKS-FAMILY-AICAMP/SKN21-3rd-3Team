@@ -57,6 +57,10 @@ data/raw/*.txt
 data/processed/*.pkl
 data/processed/*.parquet
 data/processed/*.jsonl
+data/processed/*.txt
+data/processed/*.csv
+data/processed/*.jsonl
+
 
 # Logs
 logs/
