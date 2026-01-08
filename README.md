@@ -31,8 +31,8 @@
     <img src="images/박수빈.jpg" width="100%" height="100%" style="border-radius: 50%; object-fit: cover;" alt="박수빈"/>
     <h3 style="margin: 10px 0 5px 0;">박수빈</h3>
     <p style="margin: 5px 0;"> 
-      대장 | 데이터 수집 <br/>
-      임베딩 및 UI 구현
+      <strong>대장</strong>  | 임베딩 설계 <br/>
+      UI 화면 구현
     </p>
     <a href="https://github.com/sbpark2930-ui">
       <img src="https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=GitHub&logoColor=white"/>
@@ -70,7 +70,7 @@
     <img src="images/이성진.jpg" width="80%" height="80%" style="border-radius: 50%; object-fit: cover;" alt="이성진"/>
     <h3 style="margin: 10px 0 5px 0;">이성진</h3>
     <p style="margin: 5px 0;"> 
-      데이터 전처리·청킹 <br/> 
+      데이터 수집 <br/>
       프롬프트 개선
     </p>
     <a href="https://github.com/krsjlee">
@@ -175,7 +175,7 @@ AI 챗봇은 단순한 질의응답을 넘어, **사용자의 감정 상태를 �
 <br>
 
 ### 전체 흐름 요약
-1. 상담 데이터(txt/json) 수집 및 전처리
+1. 상담 데이터(json) 수집 및 전처리
 2. 발화 단위 청킹 및 메타데이터 정리
 3. 발화 내용 임베딩 후 ChromaDB 저장
 4. 사용자 질문 → 유사 상담 사례 검색
@@ -202,7 +202,6 @@ AI 챗봇은 단순한 질의응답을 넘어, **사용자의 감정 상태를 �
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
 
 #### ⚙️ Dev Environment
-![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![venv](https://img.shields.io/badge/venv-181717?style=for-the-badge&logo=python&logoColor=white)
 ![Git](https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white)
 ![VS Code](https://img.shields.io/badge/VS_Code-007ACC?style=for-the-badge&logo=visualstudiocode&logoColor=white)
@@ -219,7 +218,7 @@ AI 챗봇은 단순한 질의응답을 넘어, **사용자의 감정 상태를 �
 ```plaintext
 SKN21-3rd-3Team/
 ├── data/                       
-│   └── raw/                       # 원본 심리상담 데이터(txt / json)
+│   └── raw/                       # 원본 심리상담 데이터(json)
 |
 ├── src/                       
 │   ├── data/                   
@@ -266,9 +265,9 @@ SKN21-3rd-3Team/
 
 ### 📊 데이터 개요
 
-* **데이터 출처**: AI Hub 심리상담 데이터셋
+* **데이터 출처**: [AI Hub 심리상담 데이터셋](https://www.aihub.or.kr/aihubdata/data/view.do?pageIndex=1&currMenu=115&topMenu=100&srchOptnCnd=OPTNCND001&srchDetailCnd=DETAILCND001&srchOrder=ORDER001&srchPagePer=20&srchDataRealmCode=REALM006&aihubDataSe=data&dataSetSn=71806)
 * **카테고리**: 우울(DEPRESSION), 불안(ANXIETY), 중독(ADDICTION), 일반(NORMAL)
-* **형식**: txt(상담 원문 발화) + json(라벨 및 메타데이터)
+* **형식**: json(상담 원문 발화 및 라벨, 메타데이터 ) 
 * **구조**: 상담 세션 단위 → 발화(paragraph) 단위 분리
 > 상세 데이터 구조 및 컬럼 정의는 **Data & Baseline Setup** 섹션에서 설명합니다.
 
@@ -276,7 +275,7 @@ SKN21-3rd-3Team/
 
 ### 🧠 데이터 전처리 & 임베딩 개요
 
-* txt 파일에서 `상담사 / 내담자` 발화를 기준으로 발화 단위 분리
+* json 파일에서 `상담사 / 내담자` 발화를 기준으로 발화 단위 분리
 * json 파일에서 연령, 성별, 상담 카테고리, 심리 지표(우울·불안·중독 등) 추출
 * 발화 텍스트만 임베딩하여 ChromaDB(Vector DB)에 저장
 
@@ -322,13 +321,13 @@ SKN21-3rd-3Team/
 ### Data & Baseline Setup
 
 - **데이터 구조**  
-  본 프로젝트는 AI Hub 심리상담 데이터셋을 기반으로 하며, 상담 원문(`.txt`)과 라벨·메타데이터(`.json`)가 1:1로 매칭된 형태로 구성됩니다. 데이터는 `data/raw/` 디렉토리에 **원본 그대로** 저장되며, 전처리 이후의 데이터는 별도로 저장하지 않습니다.
+  본 프로젝트는 AI Hub 심리상담 데이터셋을 기반으로 하며, 상담 원문(`.json`)과 라벨·메타데이터(`.json`)가 1:1로 매칭된 형태로 구성됩니다. 데이터는 `data/raw/` 디렉토리에 **원본 그대로** 저장되며, 전처리 이후의 데이터는 별도로 저장하지 않습니다.
 
 #### 🔹 `Original Dataset` — 원천 데이터 구조
 
 | 구분 | 파일 형식 | 설명 |
 |---|---|---|
-| 상담 대화 | `.txt` | `상담사 :`, `내담자 :` 형식의 실제 상담 대화 원문 |
+| 상담 대화 | `.json` | `상담사 :`, `내담자 :` 형식의 실제 상담 대화 원문 |
 | 메타데이터 | `.json` | 연령, 성별, 상담 카테고리, 요약, 심리 지표(우울/불안/중독 등) |
 
 - **카테고리 구성**
@@ -345,10 +344,9 @@ SKN21-3rd-3Team/
   비정형 상담 대화를 RAG 검색 및 응답 생성에 적합한 구조로 변환
 
 - **전처리 파이프라인**
-  1. txt 파일 파싱 → 발화 단위 분리  
-  2. json 파일 파싱 → 메타데이터 및 상담 요약 추출  
-  3. 발화 단위 데이터와 메타데이터 통합  
-  4. DB 저장용 구조로 변환
+  1. json 파일 파싱 → 발화 단위 분리, 메타데이터 및 상담 요약 추출  
+  2. 발화 단위 데이터와 메타데이터 통합  
+  3. DB 저장용 구조로 변환
 
 #### 🔹 `Chunking Strategy` — 발화 단위 분리
 
@@ -517,7 +515,7 @@ erDiagram
 ## 7️⃣ 회고
 ### Final Summary & Key Takeaways
 
-- 상담 원문(txt)과 라벨(json)을 결합하여 **구조화된 상담 데이터셋**을 구성
+- 라벨(json) 데이터를 파싱하여 세션/턴 단위로 정규화하고,이를 기반으로 **구조화된 상담 데이터셋**을 구성
 - 발화 단위 청킹 및 벡터화로 **유사 상담 맥락 검색** 가능
 - RAG 기반 응답 생성으로 **맥락적·공감형 상담 응답** 제공
 - 본 프로젝트는 심리상담을 대체하지 않으며, 초기 정서적 지원과 자기 이해를 돕는 도구로 활용되는 것을 목표로 합니다.
