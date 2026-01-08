@@ -107,6 +107,121 @@ SYSTEM_PROMPT = """\
 """
 
 # -------------------------------------------------------------
+# Retrieval with Distance Score Display
+# -------------------------------------------------------------
+
+def retrieve_with_scores(
+    query: str,
+    vector_store: Optional[VectorStore] = None,
+    n_results: int = 5
+) -> List[Dict]:
+    """
+    VectorStore에서 문서를 검색하고 distance 점수를 터미널에 출력
+    
+    Args:
+        query: 검색 쿼리
+        vector_store: VectorStore 인스턴스
+        n_results: 검색할 문서 수
+    
+    Returns:
+        검색된 문서 리스트 (content, metadata, distance 포함)
+    """
+    if vector_store is None:
+        print("[Retrieval] VectorStore 없음 - Mock 문서 사용")
+        return []
+    
+    try:
+        # VectorStore에서 검색 수행
+        search_results = vector_store.search(
+            query=query,
+            n_results=n_results
+        )
+        
+        # 결과 파싱 및 distance 출력
+        docs = []
+        ids = search_results.get("ids", [[]])[0]
+        documents = search_results.get("documents", [[]])[0]
+        metadatas = search_results.get("metadatas", [[]])[0]
+        distances = search_results.get("distances", [[]])[0]
+        
+        print(f"\n[Retrieval] 검색 결과: {len(documents)}개 문서")
+        for i, (doc_id, doc, meta, dist) in enumerate(zip(ids, documents, metadatas, distances)):
+            print(f"  Doc {i+1} | Distance: {dist:.4f} | ID: {doc_id[:30]}...")
+            docs.append({
+                "content": doc,
+                "metadata": meta,
+                "distance": dist,
+                "id": doc_id
+            })
+        print()
+        
+        return docs
+    
+    except Exception as e:
+        print(f"[Retrieval Error] {e}")
+        return []
+
+
+# -------------------------------------------------------------
+# Emotion Analysis
+# -------------------------------------------------------------
+
+EMOTION_ANALYSIS_PROMPT = """\
+당신은 심리 상담 전문가로서 사용자의 대화 내용을 분석하여 감정 상태를 점수로 평가합니다.
+
+다음 감정 차원을 0-10점 척도로 평가해주세요:
+- 우울감 (Depression): 0=없음, 10=매우 심각
+- 불안감 (Anxiety): 0=없음, 10=매우 심각
+- 분노/짜증 (Anger): 0=없음, 10=매우 심각
+- 스트레스 (Stress): 0=없음, 10=매우 심각
+- 긍정 감정 (Positive): 0=없음, 10=매우 높음
+
+사용자의 대화 내용:
+{conversation}
+
+위 대화를 분석하여 **반드시 아래 형식으로만** 답변하세요:
+우울감: [점수]
+불안감: [점수]
+분노/짜증: [점수]
+스트레스: [점수]
+긍정 감정: [점수]
+
+간단 분석: [1-2문장으로 현재 감정 상태 요약]
+"""
+
+def analyze_emotion_scores(history: List[Dict], model) -> str:
+    """
+    대화 히스토리를 분석하여 감정 점수 반환
+    
+    Args:
+        history: 대화 히스토리
+        model: LLM 모델
+    
+    Returns:
+        감정 점수 분석 결과 문자열
+    """
+    if not history:
+        return "분석할 대화 내용이 없습니다."
+    
+    # 최근 대화 내용만 사용 (최대 10개)
+    recent_history = history[-10:] if len(history) > 10 else history
+    conversation_text = format_history(recent_history)
+    
+    try:
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", "당신은 심리 상담 전문가입니다."),
+            ("user", EMOTION_ANALYSIS_PROMPT)
+        ])
+        
+        chain = prompt | model | StrOutputParser()
+        result = chain.invoke({"conversation": conversation_text})
+        
+        return f"\n\n📊 **감정 상태 분석**\n{result.strip()}"
+    
+    except Exception as e:
+        return f"\n\n[Error] 감정 분석 중 오류 발생: {str(e)}"
+
+# -------------------------------------------------------------
 # answer helper functions
 # -------------------------------------------------------------
 
@@ -203,11 +318,20 @@ def generate_answer(
     history: Optional[List[Dict]] = None,
     session_id: Optional[int] = None,
     db: Optional[Any] = None,
-    model=None
+    model=None,
+    vector_store: Optional[VectorStore] = None,
+    use_retrieval: bool = False
 ) -> str:
     """
     정해진 프롬프트를 따라서 사용자의 질문에 대한 답변을 생성합니다.
     (LCEL create_answer_chain을 내부적으로 사용하는 래퍼 함수)
+    
+    특수 키워드:
+    - "감정점수", "감정분석", "감정상태" 등 -> 감정 점수 분석 결과 반환
+    
+    Args:
+        use_retrieval: True면 VectorStore에서 실시간 검색 수행 (distance 점수 출력)
+        vector_store: VectorStore 인스턴스 (use_retrieval=True일 때 필요)
     """
     # 1) model 준비
     if model is None:
@@ -215,14 +339,34 @@ def generate_answer(
             model = create_chat_model()
         except Exception:
             return "[Error] 모델을 초기화할 수 없습니다. (model_config.py 확인 필요)"
-
-    # 2) Context 구성
-    context_text = format_sources(docs)
     
-    # 3) History 구성
+    # 2) 감정 점수 요청 감지 (띄어쓰기 제거하고 검사)
+    query_normalized = query.lower().replace(" ", "")
+    
+    # 키워드 그룹: 감정/기분 + 점수/분석/상태
+    emotion_words = ["감정", "기분", "마음", "심리"]
+    score_words = ["점수", "분석", "상태", "평가", "측정"]
+    
+    # 감정 관련 단어와 점수/분석 단어가 함께 있으면 감정 분석 실행
+    has_emotion = any(word in query_normalized for word in emotion_words)
+    has_score = any(word in query_normalized for word in score_words)
+    
+    if has_emotion and has_score:
+        # 감정 분석 실행
+        emotion_result = analyze_emotion_scores(history if history else [], model)
+        return f"네, 최근 대화 내용을 바탕으로 감정 상태를 분석해드릴게요.{emotion_result}"
+
+    # 3) Context 구성 - VectorStore에서 실시간 검색 또는 기존 docs 사용
+    if use_retrieval and vector_store:
+        retrieved_docs = retrieve_with_scores(query, vector_store, n_results=5)
+        context_text = format_sources(retrieved_docs)
+    else:
+        context_text = format_sources(docs)
+    
+    # 4) History 구성
     history_text = format_history(history) if history else "없음"
 
-    # 4) LCEL 실행
+    # 5) LCEL 실행
     try:
         chain = create_answer_chain(model)
         answer = chain.invoke({
@@ -266,7 +410,23 @@ if __name__ == "__main__":
     print("=== RAG Answer Generation Test ===")
     print("'exit' 입력 시 종료\n")
     
-    # Mock Docs (기본 예시)
+    # VectorStore 사용 여부 선택
+    use_vector = input("VectorStore 사용하시겠습니까? (y/n, 기본: n): ").strip().lower()
+    use_retrieval = use_vector == 'y'
+    
+    vector_store = None
+    if use_retrieval:
+        try:
+            print("\n[초기화] VectorStore 로딩 중...")
+            vector_store = VectorStore()
+            doc_count = vector_store.get_document_count()
+            print(f"[초기화] VectorStore 준비 완료 - {doc_count:,}개 문서\n")
+        except Exception as e:
+            print(f"[초기화 실패] VectorStore를 로드할 수 없습니다: {e}")
+            print("[초기화] Mock 문서로 진행합니다.\n")
+            use_retrieval = False
+    
+    # Mock Docs (VectorStore 미사용 시)
     mock_docs = [
         {"content": "우울증은 전문가의 도움을 받으면 호전될 수 있습니다.", "metadata": {"category": "DEPRESSION", "speaker": "상담사", "severity": 2}},
         {"content": "규칙적인 운동과 수면이 정신 건강에 도움이 됩니다.", "metadata": {"category": "NORMAL", "speaker": "상담사", "severity": 0}}
@@ -277,7 +437,6 @@ if __name__ == "__main__":
     
     try:
         model = create_chat_model()
-        chain = create_answer_chain(model)
         
         while True:
             # 사용자 입력
@@ -290,16 +449,15 @@ if __name__ == "__main__":
             if not query:
                 continue
             
-            # Context 구성
-            ctx = format_sources(mock_docs)
-            hist = format_history(history)
-            
-            # 답변 생성
-            response = chain.invoke({
-                "context": ctx,
-                "history": hist if hist else "없음",
-                "query": query
-            })
+            # generate_answer 함수 사용 (키워드 감지 포함)
+            response = generate_answer(
+                docs=mock_docs,
+                query=query,
+                history=history,
+                model=model,
+                vector_store=vector_store,
+                use_retrieval=use_retrieval
+            )
             
             print(f"\n[상담사] {response}")
             
@@ -310,4 +468,5 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n\n테스트를 종료합니다.")
     except Exception as e:
+        print(f"[Error] {e}")
         print(f"[Error] {e}")
