@@ -174,7 +174,6 @@ AI 챗봇은 단순한 질의응답을 넘어, **사용자의 감정 상태를 �
 
 
 #### 💾 Database
-![SQLite](https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white)
 ![ChromaDB](https://img.shields.io/badge/ChromaDB-FF6F61?style=for-the-badge)
 
 
@@ -203,7 +202,7 @@ SKN21-3rd-3Team/
 |
 ├── src/                        # RAG · 데이터 처리 로직
 │   ├── data/                   # 데이터 전처리 및 DB 적재 파이프라인
-│   ├── database/               # SQLite · ChromaDB 스키마 및 DB 관리
+│   ├── database/               # ChromaDB 스키마 및 DB 관리
 │   └── rag/                    # RAG 응답 생성 로직 (Retriever · Chain)
 |
 ├── app/                        # Flask 기반 웹 애플리케이션
@@ -245,10 +244,7 @@ SKN21-3rd-3Team/
 
 * txt 파일에서 `상담사 / 내담자` 발화를 기준으로 발화 단위 분리
 * json 파일에서 연령, 성별, 상담 카테고리, 심리 지표(우울·불안·중독 등) 추출
-* 발화 단위 데이터는 SQLite에 구조화하여 저장
 * 발화 텍스트만 임베딩하여 ChromaDB(Vector DB)에 저장
-
-> 핵심 원칙: **구조화 데이터(SQLite)** 와 **의미 기반 검색 데이터(ChromaDB)** 를 분리하여 관리
 
 ### ⚠️ 윤리 및 안전 설계 개요
 
@@ -279,7 +275,7 @@ SKN21-3rd-3Team/
 * `DATA_ANALYSIS.md` – 데이터 분석 요약
 * `data_collection.md` – 데이터 수집·임베딩 가이드
 * `GUIDE_전처리.md` – 전처리 상세 가이드
-* `GUIDE_CRUD.md` – SQLite & ChromaDB CRUD
+* `GUIDE_CRUD.md` – ChromaDB CRUD
 * `GUIDE_함수.md` – Vector DB 함수 정리
 
 ### Data & Baseline Setup
@@ -326,11 +322,11 @@ SKN21-3rd-3Team/
 <br>
 
 ## 5️⃣ 데이터 베이스 테이블 설명
-### Database & Vector Store Baseline
+### Database & Vector Store
 
-- **이중 DB 구조**
-  - **SQLite**: 상담 세션, 발화 메타데이터, 사용자 정보 등 구조화 데이터 관리
-  - **ChromaDB**: 발화 텍스트 임베딩 벡터 저장 및 유사도 검색
+#### Vector Store + File Storage 구조
+- ChromaDB: 임베딩 벡터 저장 및 유사도 검색
+- File Storage (JSON/JSONL): 상담 세션, 발화 로그, 사용자 상태 등 구조화/로그 데이터는 파일로 저장
 
 ### DB 구조 or Table 설명
 - ai피드백받았는데 이부분이 빈거같다고하셨슨!!!!!!!!!!!!!!!!!⚪⚫⚪⚫⚪
@@ -339,9 +335,8 @@ SKN21-3rd-3Team/
 
 | 구성 요소 | 역할 |
 |---|---|
-| SQLite | 세션 관리, 상담 기록, 심리 지표 저장 |
-| ChromaDB | 의미 기반 유사 상담 검색(RAG Retriever) |
-- 전처리된 발화 데이터는 SQLite에 저장된 후, 동일 발화 텍스트가 임베딩되어 ChromaDB 컬렉션에 저장됩니다.
+| ChromaDB | 발화 텍스트 임베딩 저장 및 의미 기반 유사 상담 검색 (RAG Retriever) |
+
 
 <br>
 
