@@ -437,7 +437,7 @@ SKN21-3rd-3Team/
 ### Chunking Strategy (Window Sliding)
 #### Overview
 
-  -대화 맥락을 유지하면서 검색 단위를 과도하게 키우지 않기 위해, **현재 발화(Current Turn)**를 중심으로 이전(Pre-context) 및 다음(Post-context) 발화를 포함하는 방식으로 청크를 생성한다.
+  - 대화 맥락을 유지하면서 검색 단위를 과도하게 키우지 않기 위해, **현재 발화(Current Turn)**를 중심으로 이전(Pre-context) 및 다음(Post-context) 발화를 포함하는 방식으로 청크를 생성한다.
     * Method: Window Sliding
     
     * Center: Current Turn
