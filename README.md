@@ -274,15 +274,15 @@ SKN21-3rd-3Team/
 │   |    └── db_manager.py         # DB 접근 및 관리 로직
 |   |
 │   └── rag/                    
-│       ├── rewrite.py             # 대화 히스토리 기반 쿼리 재작성
-│       ├── retriever.py           # 유사 상담 사례 검색
-│       ├── answer.py              # 답변 생성 및 후처리
-│       └── chain.py               # RAG 전체 흐름 제어
+│        ├── rewrite.py             # 대화 히스토리 기반 쿼리 재작성
+│        ├── retriever.py           # 유사 상담 사례 검색
+│        ├── answer.py              # 답변 생성 및 후처리
+│        └── chain.py               # RAG 전체 흐름 제어
 |
 ├── app/                        
-│   ├── main.py                    # Flask 엔트리포인트
-│   ├── templates/                 # HTML 템플릿
-│   └── static/                    # 정적 파일
+│    ├── main.py                    # Flask 엔트리포인트
+│    ├── templates/                 # HTML 템플릿
+│    └── static/                    # 정적 파일
 |
 ├── config/                        # 설정 파일
 ├── docs/                          # 설계 문서 및 가이드
@@ -306,7 +306,6 @@ SKN21-3rd-3Team/
 아래에 이어지는 상세 실험·설계 설명에 앞서, 이 프로젝트의 **데이터 구성, 처리 흐름, 챗봇 동작 방식, 안전 설계, 확장 방향**을 한눈에 요약합니다.
 
 ### 📊 데이터 개요
-
 * **데이터 출처**: [AI Hub 심리상담 데이터셋](https://www.aihub.or.kr/aihubdata/data/view.do?pageIndex=1&currMenu=115&topMenu=100&srchOptnCnd=OPTNCND001&srchDetailCnd=DETAILCND001&srchOrder=ORDER001&srchPagePer=20&srchDataRealmCode=REALM006&aihubDataSe=data&dataSetSn=71806)
 * **카테고리**: 우울(DEPRESSION), 불안(ANXIETY), 중독(ADDICTION), 일반(NORMAL)
 * **형식**: json(상담 원문 발화 및 라벨, 메타데이터 ) 
@@ -316,7 +315,6 @@ SKN21-3rd-3Team/
 <br>
 
 ### 🧠 데이터 전처리 & 임베딩 개요
-
 * json 파일에서 `상담사 / 내담자` 발화를 기준으로 발화 단위 분리
 * json 파일에서 연령, 성별, 상담 카테고리, 심리 지표(우울·불안·중독 등) 추출
 * 발화 텍스트만 임베딩하여 ChromaDB(Vector DB)에 저장
@@ -324,7 +322,6 @@ SKN21-3rd-3Team/
 <br>
 
 ### ⚠️ 윤리 및 안전 설계 개요
-
 * 심리상담 챗봇은 **의료·심리 진단 도구가 아님!**
 * 자해·자살 등 고위험 키워드 감지 시:
   - 즉각적인 주의 안내 메시지 제공
@@ -335,7 +332,6 @@ SKN21-3rd-3Team/
 <br>
 
 ### 📌 향후 확장 방향 (요약)
-
 * 상담 세션 시계열 기반 위험도 변화 추적
 * 감정·정서 변화 추이 시각화
 * 멀티모달 입력(음성 → 텍스트) 확장
@@ -343,13 +339,11 @@ SKN21-3rd-3Team/
 * 심리 척도 기반 상태 추정 고도화
 * 전문가 상담 연계(Referral / Escalation) 모듈
 * 상담 기록 기반 맞춤형 행동·케어 플랜 추천
-
 > 확장 아이디어에 대한 배경 및 근거는 **Future Work** 관련 문단에서 추가 설명될 수 있습니다.
 
 <br>
 
 ### 📄 참고 문서
-
 * `architecture.md` – 시스템 아키텍처
 * `DATABASE_DESIGN.md` – DB/ERD 설계
 * `DATA_ANALYSIS.md` – 데이터 분석 요약
@@ -361,7 +355,6 @@ SKN21-3rd-3Team/
 <br>
 
 ### Data & Baseline Setup
-
 - **데이터 구조**  
   AI Hub 심리상담 데이터셋을 기반으로, 다수의 상담 대화 기록과 해당 대화에 대한 라벨 및 메타데이터가 JSON 형식으로 구성되어 있습니다.  
   원본 데이터는 `data/raw/` 디렉토리에 저장되어 있으며, 전처리 과정에서 대화 단위로 재구성된  
