@@ -67,7 +67,7 @@
 
 <!-- 이성진 -->
 <td align="center" width="200" style="vertical-align: top; padding: 15px;">
-    <img src="images/이성진.jpg" width="150%" height="150%"
+    <img src="images/이성진.jpg" width="120%" height="120%"
          style="border-radius: 50%; object-fit: cover;" alt="이성진"/>
     <h3 style="margin: 10px 0 5px 0;">이성진</h3>
     <p style="margin: 5px 0;"> 
@@ -81,7 +81,7 @@
 
 <!-- 장이선 -->
 <td align="center" width="200" style="vertical-align: top; padding: 15px;">
-    <img src="images/장이선.jpg" width="80%" height="80%"
+    <img src="images/장이선.jpg" width="100%" height="100%"
          style="border-radius: 50%; object-fit: cover;" alt="장이선"/>
     <h3 style="margin: 10px 0 5px 0;">장이선</h3>
     <p style="margin: 5px 0;"> 
