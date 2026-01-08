@@ -11,6 +11,7 @@ Issue/Note  : DB 연결, Rewrite, Retrieve, Answer 모든 단계 통합
 # -------------------------------------------------------------
 
 import sys
+import time
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 
@@ -113,6 +114,8 @@ class RAGChain:
         
         print(f"[Step] Input: {query}")
         
+        start_time = time.time()
+        
         try:
             # 3. 체인 실행
             result = self.rag_pipeline.invoke({
@@ -132,6 +135,10 @@ class RAGChain:
             
             # 5. Assistant 메시지 저장
             self.db.add_chat_message(session_id, "assistant", answer)
+            
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            print(f"[System] Response Time: {elapsed_time:.2f}s")
             
             print(f"[Flow End] 답변 등 생성 완료")
             return answer

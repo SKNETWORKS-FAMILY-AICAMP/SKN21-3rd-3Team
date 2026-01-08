@@ -28,7 +28,8 @@ class OpenAIConfig:
     
     API_KEY = os.getenv("OPENAI_API_KEY", "")
     EMBEDDING_MODEL = "text-embedding-3-small"
-    OPENAI_CHAT_MODEL=os.getenv("OPENAI_CHAT_MODEL", "gpt-5-mini")
+    OPENAI_CHAT_MODEL=os.getenv("OPENAI_CHAT_MODEL", "")
+    TAVILY_API_KEY = os.getenv("TAVILY_API_KEY", "")
 
     @classmethod
     def validate(cls) -> bool:
@@ -44,6 +45,9 @@ class OpenAIConfig:
         if not cls.OPENAI_CHAT_MODEL:
             print("WARNING: OPENAI_CHAT_MODEL가 설정되지 않았습니다.")
             return False
+        if not cls.TAVILY_API_KEY:
+            print("WARNING: TAVILY_API_KEY가 설정되지 않았습니다.")
+            return False
         return True
 
 # -------------------------------------------------------------
@@ -55,7 +59,7 @@ def create_chat_model() -> ChatOpenAI:
     OpenAIConfig.OPENAI_CHAT_MODEL에서 모델이름을 가져와 ChatOpenAI 모델을 실질적으로 생성
     """
     model_name = OpenAIConfig.OPENAI_CHAT_MODEL
-    # print(f"모델이름: {model_name}")
+    print(f"모델이름: {model_name}")
 
     try:
         model = ChatOpenAI(model=model_name)
