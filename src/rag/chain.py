@@ -72,6 +72,12 @@ class RAGChain:
         # Input: {..., rewritten_query} -> Output: source_docs (List), context (Str)
         def retrieve_and_format(x):
             docs = retriever_func(query=x["rewritten_query"])
+            for i, doc in enumerate(docs):
+                dist = doc.get("distance")
+                if dist is not None:
+                    print(f"[Retrieval] Doc {i+1} distance: {dist:.4f}")
+                else:
+                    print(f"[Retrieval] Doc {i+1} distance: None")
             return {"source_docs": docs, "context": format_sources(docs)}
 
         retrieve_step = RunnablePassthrough.assign(
