@@ -1188,9 +1188,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 const contentDisposition = response.headers.get('Content-Disposition');
                 let filename = `상담기록_${sessionId}.pdf`;
                 if (contentDisposition) {
-                    const match = contentDisposition.match(/filename\*?=(?:UTF-8'')?(.+)/i);
+                    let match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
                     if (match) {
-                        filename = decodeURIComponent(match[1].replace(/"/g, ''));
+                        filename = decodeURIComponent(match[1]);
+                    } else {
+                        match = contentDisposition.match(/filename="?([^";]+)"?/i);
+                        if (match) {
+                            filename = match[1];
+                        }
                     }
                 }
                 

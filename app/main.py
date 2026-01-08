@@ -677,9 +677,6 @@ def api_export_pdf(session_id):
         
         # PDF 생성
         from src.utils.pdf_exporter import PDFExporter
-        import inspect
-        print(f"[Debug] PDFExporter module: {PDFExporter.__module__}")
-        print(f"[Debug] export_session signature: {inspect.signature(PDFExporter.export_session)}")
         
         exporter = PDFExporter(db_manager)
         today_str = datetime.now().strftime("%Y-%m-%d")
