@@ -30,9 +30,12 @@
 <td align="center" width="200" style="vertical-align: top; padding: 15px;">
     <img src="images/박수빈.jpg" width="180" height="180" style="border-radius: 50%; object-fit: cover;" alt="박수빈"/>
     <h3 style="margin: 10px 0 5px 0;">박수빈</h3>
-    <p style="margin: 5px 0;"> 대장 | ?? </p>
+    <p style="margin: 5px 0;"> 
+      대장 | 데이터 수집 <br/>
+      임베딩 및 UI 구현
+    </p>
     <a bref="https://github.com/sbpark2930-ui">
-        <img src="https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=GitHub&logoColor=white"/>
+      <img src="https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=GitHub&logoColor=white"/>
     </a>
 </td>
 
@@ -40,7 +43,10 @@
 <td align="center" width="200" style="vertical-align: top; padding: 15px;">
     <img src="images/손현우.jpg" width="180" height="180" style="border-radius: 50%; object-fit: cover;" alt="손현우"/>
     <h3 style="margin: 10px 0 5px 0;">손현우</h3>
-    <p style="margin: 5px 0;"> ?? </p>
+    <p style="margin: 5px 0;"> 
+      테스트 설계 <br/> 
+      RAG 성능평가
+    </p>
     <a bref="https://github.com/kevinhwsohn-afk">
         <img src="https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=GitHub&logoColor=white"/>
     </a>
@@ -50,7 +56,10 @@
 <td align="center" width="200" style="vertical-align: top; padding: 15px;">
     <img src="images/우재현.jpg" width="180" height="180" style="border-radius: 50%; object-fit: cover;" alt="우재현"/>
     <h3 style="margin: 10px 0 5px 0;">우재현</h3>
-    <p style="margin: 5px 0;"> ?? </p>
+    <p style="margin: 5px 0;">
+      프롬프트 설계 <br/> 
+      Answer/Chain 구현
+    </p>
     <a bref="https://github.com/Wjaehyun">
        <img src="https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=GitHub&logoColor=white"/>
     </a>
@@ -60,7 +69,10 @@
 <td align="center" width="200" style="vertical-align: top; padding: 15px;">
     <img src="images/이성진.jpg" width="180" height="180" style="border-radius: 50%; object-fit: cover;" alt="이성진"/>
     <h3 style="margin: 10px 0 5px 0;">이성진</h3>
-    <p style="margin: 5px 0;"> 데이터 전처리, 시스템 프롬프트 개선 </p>
+    <p style="margin: 5px 0;"> 
+      데이터 전처리·청킹 <br/> 
+      프롬프트 개선
+    </p>
     <a bref="https://github.com/krsjlee">
         <img src="https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=GitHub&logoColor=white"/>
     </a>
@@ -70,7 +82,10 @@
 <td align="center" width="200" style="vertical-align: top; padding: 15px;">
     <img src="images/장이선.jpg" width="180" height="180" style="border-radius: 50%; object-fit: cover;" alt="장이선"/>
     <h3 style="margin: 10px 0 5px 0;">장이선</h3>
-    <p style="margin: 5px 0;"> 데이터 전처리 </p>
+    <p style="margin: 5px 0;"> 
+      데이터 전처리·청킹 <br/>
+      README 작성 
+    </p>
     <a bref="https://github.com/jang-yiseon">
         <img src="https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=GitHub&logoColor=white"/>
     </a>
@@ -80,7 +95,10 @@
 <td align="center" width="200" style="vertical-align: top; padding: 15px;">
     <img src="images/조남웅.jpg" width="180" height="180" style="border-radius: 50%; object-fit: cover;" alt="조남웅"/>
     <h3 style="margin: 10px 0 5px 0;">조남웅</h3>
-    <p style="margin: 5px 0;"> ?? </p>
+    <p style="margin: 5px 0;"> 
+      Retriever 구현 <br/>
+      Vector DB 검색
+    </p>
     <a bref="https://github.com/whskadnd">
         <img src="https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=GitHub&logoColor=white"/>
     </a>
@@ -426,5 +444,5 @@ SKN21-3rd-3Team/
 | **손현우** | ?? | 채워주세요. |
 | **우재현** | ?? | 채워주세요. |
 | **이성진** | 데이터 전처리, 시스템 프롬프트 개선 | 챗봇. 누구나 만든다고. 그것도 아주 쉽게. 딸깍딸깍 몇 번으로. 이거 다 *소리다. 만들기야 쉽겠지. 지피티나 제미나이도 뚝닥. 하지만 '제대로' 만들었는지? 챗봇이 답변 잘하는지? 챗봇 답변 때문에 깊고 깊으며 깊은 빡침을 수도 없이 느꼈다. |
-| **장이선** | 데이터 전처 | 채워주세요. |
+| **장이선** | 데이터 전처리 | 채워주세요. |
 | **조남웅** | ?? | 채워주세요. |
