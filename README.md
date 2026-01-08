@@ -28,7 +28,7 @@
 <tr>
 <!-- 박수빈 -->
 <td align="center" width="200" style="vertical-align: top; padding: 15px;">
-    <img src="images/박수빈.jpg" width="100%" height="100%" style="border-radius: 50%; object-fit: cover;" alt="박수빈"/>
+    <img src="images/박수빈.png" width="100%" height="100%" style="border-radius: 50%; object-fit: cover;" alt="박수빈"/>
     <h3 style="margin: 10px 0 5px 0;">박수빈</h3>
     <p style="margin: 5px 0;"> 
       <strong>대장</strong>  | 임베딩 설계 <br/>
@@ -41,7 +41,7 @@
 
 <!-- 손현우 -->
 <td align="center" width="200" style="vertical-align: top; padding: 15px;">
-    <img src="images/손현우.jpg" width="100%" height="100%" style="border-radius: 50%; object-fit: cover;" alt="손현우"/>
+    <img src="images/손현우.png" width="100%" height="100%" style="border-radius: 50%; object-fit: cover;" alt="손현우"/>
     <h3 style="margin: 10px 0 5px 0;">손현우</h3>
     <p style="margin: 5px 0;"> 
       테스트 설계 <br/> 
@@ -54,7 +54,7 @@
     
 <!-- 우재현 -->
 <td align="center" width="200" style="vertical-align: top; padding: 15px;">
-    <img src="images/우재현.jpg" width="100%" height="100%" style="border-radius: 50%; object-fit: cover;" alt="우재현"/>
+    <img src="images/우재현.png" width="100%" height="100%" style="border-radius: 50%; object-fit: cover;" alt="우재현"/>
     <h3 style="margin: 10px 0 5px 0;">우재현</h3>
     <p style="margin: 5px 0;">
       프롬프트 설계 <br/> 
@@ -67,7 +67,7 @@
 
 <!-- 이성진 -->
 <td align="center" width="200" style="vertical-align: top; padding: 15px;">
-    <img src="images/이성진.jpg" width="120%" height="120%"
+    <img src="images/이성진.png" width="120%" height="120%"
          style="border-radius: 50%; object-fit: cover;" alt="이성진"/>
     <h3 style="margin: 10px 0 5px 0;">이성진</h3>
     <p style="margin: 5px 0;"> 
@@ -81,7 +81,7 @@
 
 <!-- 장이선 -->
 <td align="center" width="200" style="vertical-align: top; padding: 15px;">
-    <img src="images/장이선.jpg" width="100%" height="100%"
+    <img src="images/장이선.png" width="100%" height="100%"
          style="border-radius: 50%; object-fit: cover;" alt="장이선"/>
     <h3 style="margin: 10px 0 5px 0;">장이선</h3>
     <p style="margin: 5px 0;"> 
@@ -95,7 +95,7 @@
 
 <!-- 조남웅 -->
 <td align="center" width="200" style="vertical-align: top; padding: 15px;">
-    <img src="images/조남웅.jpg" width="100%" height="100%"
+    <img src="images/조남웅.png" width="100%" height="100%"
          style="border-radius: 50%; object-fit: cover;" alt="조남웅"/>
     <h3 style="margin: 10px 0 5px 0;">조남웅</h3>
     <p style="margin: 5px 0;"> 
