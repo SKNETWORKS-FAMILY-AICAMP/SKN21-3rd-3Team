@@ -7,16 +7,14 @@ Issue/Note  :
 """
 
 from src.database.database_schema import (
-    User, ChatSession, ChatMessage,
-    CounselingData, CounselingParagraph, ExpertReferral,
+    User, ChatSession, ChatMessage, ExpertReferral,
     init_database, get_session
 )
 from src.database.vector_store import VectorStore
 from src.database.db_manager import DatabaseManager
 
 __all__ = [
-    "User", "ChatSession", "ChatMessage",
-    "CounselingData", "CounselingParagraph", "ExpertReferral",
+    "User", "ChatSession", "ChatMessage", "ExpertReferral",
     "init_database", "get_session",
     "VectorStore", "DatabaseManager"
 ]

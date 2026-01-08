@@ -134,64 +134,7 @@ class ChatMessage(Base):
         return f"<ChatMessage(id={self.id}, role='{self.role}')>"
 
 
-# -------------------------------------------------------------
-# Counseling Data Model (상담 원본 데이터)
-# -------------------------------------------------------------
 
-class CounselingData(Base):
-    """
-    상담 데이터 테이블 (세션 단위)
-    - 이기종 데이터 통합을 위한 유연한 스키마
-    - has_detailed_label: 상세 라벨 존재 여부 (향후 라벨 없는 데이터도 수용)
-    - raw_metadata: 원본 JSON 데이터 전체 보존
-    """
-    __tablename__ = "counseling_data"
-    
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    source_id = Column(String(50), nullable=False, unique=True)  # 예: D012, X007
-    category = Column(String(20), nullable=False)  # DEPRESSION, ANXIETY, ADDICTION, NORMAL
-    severity = Column(Integer, nullable=True)  # 0-3, NULL 허용 (라벨 없는 데이터)
-    summary = Column(Text, nullable=True)
-    source_file = Column(String(255), nullable=True)
-    data_format = Column(String(20), default="labeled")  # labeled, unlabeled
-    has_detailed_label = Column(Boolean, default=True)
-    raw_metadata = Column(JSON, nullable=True)  # age, gender 등 원본 메타데이터 전체
-    imported_at = Column(DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    paragraphs = relationship("CounselingParagraph", back_populates="counseling_data")
-    
-    def __repr__(self):
-        return f"<CounselingData(id={self.id}, source_id='{self.source_id}', category='{self.category}')>"
-
-
-# -------------------------------------------------------------
-# Counseling Paragraph Model (상담 단락)
-# -------------------------------------------------------------
-
-class CounselingParagraph(Base):
-    """
-    상담 단락 테이블
-    - 상담 대화를 발화 단위로 분리하여 저장
-    - RAG 검색 시 관련 발화만 추출하기 위함
-    - vector_id: ChromaDB에 저장된 문서 ID와 매핑
-    - labels: 40+ 심리학적 지표 라벨 (JSON, NULL 허용)
-    """
-    __tablename__ = "counseling_paragraphs"
-    
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    counseling_id = Column(Integer, ForeignKey("counseling_data.id"), nullable=False)
-    paragraph_index = Column(Integer, nullable=False)
-    speaker = Column(String(10), nullable=False)  # 상담사, 내담자
-    content = Column(Text, nullable=False)
-    labels = Column(JSON, nullable=True)  # 심리학적 지표 라벨들
-    vector_id = Column(String(100), nullable=True)  # ChromaDB 문서 ID
-    
-    # Relationships
-    counseling_data = relationship("CounselingData", back_populates="paragraphs")
-    
-    def __repr__(self):
-        return f"<CounselingParagraph(id={self.id}, speaker='{self.speaker}', index={self.paragraph_index})>"
 
 
 # -------------------------------------------------------------

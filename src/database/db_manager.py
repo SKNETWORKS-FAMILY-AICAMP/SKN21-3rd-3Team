@@ -20,8 +20,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from config.db_config import DatabaseConfig
 from src.database.database_schema import (
     init_database, get_session, 
-    User, ChatSession, ChatMessage, 
-    CounselingData, CounselingParagraph, ExpertReferral
+    User, ChatSession, ChatMessage, ExpertReferral
 )
 from src.database.vector_store import VectorStore
 
@@ -223,107 +222,7 @@ class DatabaseManager:
         self.commit()
         return True
     
-    # -------------------------------------------------------------
-    # Counseling Data CRUD
-    # -------------------------------------------------------------
-    
-    def add_counseling_data(
-        self,
-        source_id: str,
-        category: str,
-        summary: Optional[str] = None,
-        severity: Optional[int] = None,
-        source_file: Optional[str] = None,
-        has_detailed_label: bool = True,
-        raw_metadata: Optional[Dict] = None
-    ) -> CounselingData:
-        """
-        상담 데이터 추가
-        """
-        data = CounselingData(
-            source_id=source_id,
-            category=category,
-            summary=summary,
-            severity=severity,
-            source_file=source_file,
-            data_format="labeled" if has_detailed_label else "unlabeled",
-            has_detailed_label=has_detailed_label,
-            raw_metadata=raw_metadata
-        )
-        self.session.add(data)
-        self.commit()
-        return data
-    
-    def add_counseling_paragraph(
-        self,
-        counseling_id: int,
-        paragraph_index: int,
-        speaker: str,
-        content: str,
-        labels: Optional[Dict] = None,
-        add_to_vector_store: bool = True,
-        category: str = "UNKNOWN",
-        severity: int = 0
-    ) -> CounselingParagraph:
-        """
-        상담 단락 추가 (SQLite + ChromaDB)
-        """
-        # SQLite에 저장
-        paragraph = CounselingParagraph(
-            counseling_id=counseling_id,
-            paragraph_index=paragraph_index,
-            speaker=speaker,
-            content=content,
-            labels=labels
-        )
-        
-        # ChromaDB에 추가
-        if add_to_vector_store:
-            metadata = {
-                "counseling_id": counseling_id,
-                "paragraph_index": paragraph_index,
-                "speaker": speaker,
-                "category": category,
-                "severity": severity,
-                "has_labels": labels is not None
-            }
-            
-            # 주요 라벨 추가 (검색 필터용)
-            if labels:
-                for key in ["depressive_mood", "suicidal", "anxiety", "fatigue"]:
-                    if key in labels:
-                        metadata[key] = labels[key]
-            
-            ids = self.vector_store.add_documents(
-                documents=[content],
-                metadatas=[metadata]
-            )
-            paragraph.vector_id = ids[0] if ids else None
-        
-        self.session.add(paragraph)
-        self.commit()
-        return paragraph
-    
-    def get_counseling_data(self, source_id: str) -> Optional[CounselingData]:
-        """
-        source_id로 상담 데이터 조회
-        """
-        return self.session.query(CounselingData).filter(
-            CounselingData.source_id == source_id
-        ).first()
-    
-    def search_similar_counseling(
-        self,
-        query: str,
-        n_results: int = 5,
-        category: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """
-        유사 상담 사례 검색 (벡터 검색)
-        """
-        if category:
-            return self.vector_store.search_by_category(query, category, n_results)
-        return self.vector_store.search(query, n_results)
+
     
     # -------------------------------------------------------------
     # Expert Referral
@@ -380,8 +279,6 @@ class DatabaseManager:
             "users": self.session.query(User).count(),
             "chat_sessions": self.session.query(ChatSession).count(),
             "chat_messages": self.session.query(ChatMessage).count(),
-            "counseling_data": self.session.query(CounselingData).count(),
-            "counseling_paragraphs": self.session.query(CounselingParagraph).count(),
             "expert_referrals": self.session.query(ExpertReferral).count(),
             "vector_documents": self.vector_store.get_document_count()
         }

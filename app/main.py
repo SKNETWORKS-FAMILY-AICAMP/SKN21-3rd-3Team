@@ -629,6 +629,87 @@ def api_delete_session(session_id):
         }), 500
 
 
+@app.route('/api/export-pdf/<int:session_id>', methods=['GET'])
+def api_export_pdf(session_id):
+    """
+    채팅 세션을 PDF로 다운로드
+    
+    Args:
+        session_id: 세션 ID
+        
+    Returns:
+        PDF 파일
+    """
+    from flask import send_file
+    import io
+    
+    # 로그인 확인
+    if 'user' not in session:
+        return jsonify({
+            'success': False,
+            'message': '로그인이 필요합니다'
+        }), 401
+    
+    if db_manager is None:
+        return jsonify({
+            'success': False,
+            'message': 'RAG 시스템이 초기화되지 않았습니다'
+        }), 500
+    
+    try:
+        user_info = session['user']
+        db_user = db_manager.get_user_by_username(user_info['username'])
+        
+        if db_user is None:
+            return jsonify({
+                'success': False,
+                'message': '사용자를 찾을 수 없습니다'
+            }), 404
+        
+        # 세션 조회 및 소유권 확인
+        chat_session = db_manager.get_chat_session(session_id)
+        
+        if chat_session is None or chat_session.user_id != db_user.id:
+            return jsonify({
+                'success': False,
+                'message': '채팅 세션을 찾을 수 없습니다'
+            }), 404
+        
+        # PDF 생성
+        from src.utils.pdf_exporter import PDFExporter
+        
+        exporter = PDFExporter(db_manager)
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        filename = f"상담기록_{today_str}_{session_id}.pdf"
+        
+        # 임시 파일로 저장
+        import tempfile
+        temp_dir = tempfile.gettempdir()
+        temp_path = os.path.join(temp_dir, filename)
+        
+        result = exporter.export_session(session_id, temp_path)
+        
+        if result is None:
+            return jsonify({
+                'success': False,
+                'message': '대화 내용이 없습니다'
+            }), 404
+        
+        return send_file(
+            temp_path,
+            as_attachment=True,
+            download_name=filename,
+            mimetype='application/pdf'
+        )
+        
+    except Exception as e:
+        print(f"[Error] PDF 생성 중 오류: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'PDF 생성 중 오류가 발생했습니다: {str(e)}'
+        }), 500
+
+
 @app.route('/api/chat-history/<int:session_id>', methods=['GET'])
 def api_chat_history(session_id):
     """

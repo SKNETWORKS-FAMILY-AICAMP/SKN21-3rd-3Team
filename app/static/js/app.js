@@ -1138,4 +1138,78 @@ document.addEventListener('DOMContentLoaded', function () {
             element.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     }
+    
+    // =========================================================================
+    // PDF Download Feature
+    // =========================================================================
+    
+    const downloadPdfBtn = document.getElementById('download-pdf-btn');
+    
+    if (downloadPdfBtn) {
+        downloadPdfBtn.addEventListener('click', async function() {
+            // Get current session ID from the page
+            const sessionResponse = await fetch('/api/session');
+            const sessionData = await sessionResponse.json();
+            
+            if (!sessionData.logged_in) {
+                showToast('로그인이 필요합니다');
+                return;
+            }
+            
+            // Get active chat session ID
+            const activeChat = document.querySelector('.chat-item.active');
+            let sessionId = activeChat ? activeChat.dataset.sessionId : null;
+            
+            // If no active chat selected, try to get current session
+            if (!sessionId) {
+                // Use the first chat from recent chats or show error
+                const firstChat = document.querySelector('.chat-item[data-session-id]');
+                if (firstChat) {
+                    sessionId = firstChat.dataset.sessionId;
+                } else {
+                    showToast('다운로드할 대화가 없습니다');
+                    return;
+                }
+            }
+            
+            try {
+                showToast('PDF 생성 중...');
+                
+                // Trigger download
+                const response = await fetch(`/api/export-pdf/${sessionId}`);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    showToast(errorData.message || 'PDF 다운로드 실패');
+                    return;
+                }
+                
+                // Get filename from Content-Disposition header or use default
+                const contentDisposition = response.headers.get('Content-Disposition');
+                let filename = `상담기록_${sessionId}.pdf`;
+                if (contentDisposition) {
+                    const match = contentDisposition.match(/filename\*?=(?:UTF-8'')?(.+)/i);
+                    if (match) {
+                        filename = decodeURIComponent(match[1].replace(/"/g, ''));
+                    }
+                }
+                
+                // Download the file
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                showToast('PDF 다운로드 완료!');
+            } catch (error) {
+                console.error('PDF 다운로드 에러:', error);
+                showToast('PDF 다운로드 중 오류가 발생했습니다');
+            }
+        });
+    }
 });
