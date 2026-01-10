@@ -602,39 +602,123 @@ users (1) ──── (N) chat_sessions (1) ──── (N) chat_messages
 <br>
 
 # 6️⃣ Application의 주요 기능
-## 💬 챗봇 동작 방식 요약
 
-1. 사용자 메시지 입력
-2. 대화 기록 및 세션 정보 DB 저장
-3. Vector DB에서 유사 상담 발화 검색
-4. 검색 결과를 컨텍스트로 LLM 호출
-5. 공감·위로 중심의 응답 생성 및 반환
-6. 정서 위험 신호 감지 시 안전 안내 로직 활성화
-> Retriever, RAG Chain, 응답 생성 로직에 대한 상세 설명은 **Retriever & RAG Baseline** 섹션을 참고합니다.
+## 🖥️ UI & 핵심 기능 소개
+
+사용자 친화적인 인터페이스를 통해 전문적인 심리 상담 경험을 제공합니다.
+
+<table align="center" width="100%">
+  <tr>
+    <td align="center"><b>심리 상태 자가 진단</b></td>
+    <td align="center"><b>실시간 AI 심리 상담</b></td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="images/test.png" width="370" />
+    </td>
+    <td align="center">
+      <img src="images/main.png" width="370" />
+    </td>
+  </tr>
+  <tr>
+    <td align="center"><b>문진을 통한 상태 확인</b></td>
+    <td align="center"><b>공감 기반 대화 인터페이스</b></td>
+  </tr>
+</table>
+
+- 유저 관리: 회원가입/로그인 및 마이페이지를 통한 개인별 맞춤 정보 관리
+- 자가 진단 서비스: 상담 전 문진 기능을 통해 사용자의 현재 심리 상태를 간단히 스크리닝
+- 멀티 세션 대화 히스토리: LLM 기반의 새 대화 생성 및 과거 상담 이력 보존 기능
+- 실시간 상담: RAG 엔진을 활용한 맥락 인지형 심리 상담 대화
+- 상담 리포트 발급: 상담 종료 후 대화 내용을 분석하여 PDF 결과 리포트 제공
+
+
+## ⚙️ 챗봇 동작 프로세스 (Pipeline)
+
+사용자의 발화가 입력되면 다음과 같은 단계를 거쳐 최적의 응답을 생성합니다.
+- Input: 사용자 메시지 수신 및 발화 의도 파악
+- Memory: SQLite DB를 활용한 대화 기록 및 세션 정보 로드
+- Retrieval: ChromaDB에서 유사 상담 사례 검색 (Similarity Search 적용)
+- Augmentation: 검색된 상담 맥락 + System Prompt(공감/위로 가이드) 결합
+- Generation: GPT-4o 모델을 통한 개인화된 상담 응답 생성
+- Safety Check: 정서 위험 신호 감지 시 안전 스크리닝 안내 로직 자동 활성화
 
 <br>
 
-## Retriever & RAG Baseline
+## 🧠 Retriever & RAG 실험전략
 
-- **Retriever 구성**
-  - ChromaDB 기반 cosine similarity 검색
-  - 기본 검색 개수(`top-k`) 설정을 통해 유사 상담 맥락 추출
-  - Similarity vs MMR 비교 실험 요약
-    - 동일한 Query와 top-k 조건에서 실험한 결과, Similarity와 MMR(real) 은 session_id 및 source_id 기준의 다양성 지표에서 차이를 보이지 않았다.
-    - lambda_mult=0.5 설정이 유사도 중심으로 작동하여, MMR이 구조적으로 Similarity와 유사한 검색 결과를 반환하였다.
-    - lambda_mult=0.1과 같이 다양성을 과도하게 강조한 설정에서는 결과 분산이 증가했으나, 이는 개념 검증 목적의 실험으로 실제 상담 응답에는 적합하지 않았다.
-    - 상담심리라는 문맥의 일관성과 해석 용이성을 우선시하여 Similarity Retriever를 최종 선택하였다. 
+### 🔍 Retriever 선정 및 기술 검증
+사용자의 질문에 가장 적합한 상담 사례를 찾기 위해 Similarity 방식과 MMR(Maximum Marginal Relevance) 방식의 성능을 비교 분석하였습니다.
 
-- **RAG 체인 흐름**
-  1. 사용자 입력 수신
-  2. 벡터 DB에서 유사 발화 검색
-  3. 검색 결과를 컨텍스트로 LLM 호출
-  4. 공감·위로 중심의 응답 생성
-- 단순 프롬프트 기반 챗봇과 달리, 실제 상담 사례를 근거로 응답을 생성하도록 설계되었습니다.
+
+### 1. 검색 알고리즘 정의 및 특징
+
+
+| 구분         | 방식                    | 검색 특징           | 상담 적용 관점                       |
+| ---------- | --------------------- | --------------- | ------------------------------ |
+| Similarity | 벡터 거리 기반 최상위 유사 문서 추출 | 유사도 중심 검색       | 한 내담자의 특정 상담 맥락을 깊이 있게 참조      |
+| MMR        | 유사도와 다양성의 균형 최적화      | 유사도 + 다양성 복합 검색 | 여러 상담 사례에서 유사한 슬픔의 양상을 다양하게 참조 |
+
+
+
+### 2. 데이터 구조 기반 분석 지표
+- 실험 결과의 객관성을 확보하기 위해 다음 두 가지 지표를 기준으로 검색 결과의 다양성을 측정하였습니다.
+
+- source_id: 서로 다른 상담 사례 단위
+- session_id: 동일 사례 내의 회차별 상담 대화 단위
+
+--------------------------------------------
+
+### 3. 알고리즘 비교 실험 결과
+
+<p align="center"> <img src="images/retriever comparison.png" width="600" /> </p>
+
+**Similarity vs MMR 실험 요약**
+
+- 지표 유사성: 동일 쿼리 및 top-k 조건에서 Similarity와 **MMR(real)**은 session_id 및 source_id 기준의 다양성 지표에서 유의미한 차이를 보이지 않았습니다.
+
+- 가중치 영향도: lambda_mult=0.5 설정 시 MMR이 구조적으로 유사도 중심인 Similarity와 거의 동일한 결과를 반환함을 확인하였습니다.
+
+- 과도한 다양성 실험: lambda_mult=0.1 설정(다양성 90%) 시 결과 분산은 증가했으나, 상담 심리 문맥에서 요구되는 핵심 주제와의 일관성이 결여되어 실제 서비스 적용에는 부적합한 것으로 판단되었습니다.
+
+
+### 4. 최종 Retriever 선정: Similarity Retriever
+실험 결과를 바탕으로 다음 세 가지 이유를 근거로 Similarity 방식을 최종 채택하였습니다.
+
+- 문맥의 일관성: 상담 심리 서비스 특성상, 산만한 사례 나열보다는 특정 상담 맥락의 깊이 있는 이해가 고품질 응답 생성에 유리합니다.
+
+- 해석 용이성: 검색 결과가 사용자 질문의 의도(Relevance)에 충실하여 AI 응답의 인과 관계가 명확합니다.
+
+- 효율성: 복잡한 다양성 계산 과정 없이 실시간 상담 환경에서 안정적이고 빠른 검색 성능을 보장합니다.
 
 <br>
 
 ## 모델 선정 배경
+실시간 상담 서비스의 핵심인 **지연시간**과 **응답정확도**를 기준으로 모델을 비교하였으며 총 6개의 모델을 사용해서 진행하였다.
+특히 상담 서비스의 특성상 응답 지연은 내담자의 감정 몰입을 깨뜨리고 불안·분노를 유발할 수 있기 때문에, 지연시간을 응답 정확도보다 우선적인 평가 요소로 두고 모델을 선정하였다.
+
+<table align="center" width="100%">
+  <tr>
+    <td align="center">
+      <img src="images/gpt-mix_dist.png" width="260" />
+    </td>
+    <td align="center">
+      <img src="images/gpt-mix_time.png" width="260" />
+    </td>
+  </tr>
+  <tr>
+    <td align="center"><b>Doc Distance Comparison</b></td>
+    <td align="center"><b>Response Time Comparison</b></td>
+  </tr>
+</table>
+
+- Distance Comparison review
+> 유클리드 거리 기법으로 retriever 점수를 적용. 0에 가까울 수록 더 높은 점수를 얻는 모델을 확인하려 시도하였다.
+> GPT5 모델류가 가장 뛰어난 성능을 보이고 있으나, 큰 차이를 보이고 있지 않다고 판단하였다.
+
+- Time Comparison review
+> GPT5 모델류의 응답 지연이 심각했기 때문에, GPT4 모델류 쪽에서 모델을 선정하기로 결정하였다.
+
 <table align="center" width="100%">
   <tr>
     <td align="center">
@@ -654,44 +738,7 @@ users (1) ──── (N) chat_sessions (1) ──── (N) chat_messages
   </tr>
 </table>
 
-- OpenAI의 **GPT-4o** 모델을 적용하였다.
-  실시간 상호작용을 전제로 하는 챗봇 특성상, 응답의 정확도와 함께 **응답 지연이 최소화**되는지 여부를 기준으로 모델을 선정하였다.
-
-<br>
-
-<table align="center" width="100%">
-  <tr>
-    <td align="center">
-      <img src="images/gpt-mix_dist.png" width="260" />
-    </td>
-    <td align="center">
-      <img src="images/gpt-mix_time.png" width="260" />
-    </td>
-  </tr>
-  <tr>
-    <td align="center"><b>Doc Distance Comparison</b></td>
-    <td align="center"><b>Response Time Comparison</b></td>
-  </tr>
-</table>
-
-- 여러 모델을 비교한 결과, GPT-4o는 상담 맥락 이해와 응답 품질 측면에서 안정적인 성능을 유지하면서도 응답 속도가 가장 우수한 모델로 확인되었다.
-   일부 모델의 경우 응답 생성에 수십 초 이상 소요되는 사례가 발생하여, 실시간 상담 흐름 유지에 적합하지 않다고 판단하였다.
-> 이러한 이유로, 사용자 경험을 저해하지 않으면서도 충분한 상담 응답 품질을 제공할 수 있는 모델로 [OpenAI GPT-4o](https://platform.openai.com/docs/models/gpt-4o)를 최종 선정하였다.
-
-<br>
-
-## Limitations & Baseline 한계
-- 단일 발화 또는 짧은 입력만으로는 사용자의 전체 정서 상태를 정확히 파악하기 어려움
-- 데이터 분포상 고위험(자해/자살) 사례의 비중이 낮아, 위기 상황 대응에는 보수적인 설계가 필요함
-
-<br>
-
-## Safety & Screening Baseline
-- json 메타데이터에 포함된 심리 지표(우울/불안/중독 등)를 활용하여 **간단한 정서 상태 스크리닝**을 수행합니다.
-
-- 스크리닝 결과에 따라:
-  - 공감 및 위로 메시지 제공
-  - 심호흡, 산책, 휴식 등 **일상에서 실천 가능한 정서 완화 행동** 제안
+- 최종적으로 상담을 진행해 본 결과 지연시간이 우수하며, 상담 맥락 이해와 응답 품질 측면에서 안정적인 성능을 수행하는 GPT-4o모델[OpenAI GPT-4o](https://platform.openai.com/docs/models/gpt-4o)을 사용하기로 결정하였다.
   
 <br>
 
