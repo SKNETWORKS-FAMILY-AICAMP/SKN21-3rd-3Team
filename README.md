@@ -188,37 +188,67 @@
   
 <br>
 
-## 전체 흐름 요약
-  1. 상담 데이터(json) 수집 및 전처리
-  2. 발화 단위 청킹 및 메타데이터 정리
-  3. 발화 내용 임베딩 후 ChromaDB 저장
-  4. 사용자 질문 → 유사 상담 사례 검색
-  5. 검색 컨텍스트 + 사용자 질문 → LLM 응답 생성
-  6. 대화 기록 및 위험도 DB 저장
+## 시스템 동작 원리 및 서비스 흐름
+
+### 1️⃣ 데이터 파이프라인 (Processing)
+1. **상담 데이터 수집**: JSON 형식의 상담 내역 수집 및 전처리
+2. **청킹 및 메타데이터**: 효율적 검색을 위한 발화 단위 분할 및 정리
+3. **벡터 DB 저장**: ChromaDB에 임베딩 데이터 인덱싱
+
+### 2️⃣ 답변 생성 프로세스 (Inference)
+4. **유사 사례 검색**: 사용자 질문과 가장 유사한 과거 상담 사례 검색
+5. **LLM 응답 생성**: 검색된 컨텍스트를 활용한 맞춤형 답변 생성
+6. **이력 관리**: 대화 기록 및 위험도 분석 결과 SQLite 저장
 
 <br>
 
-## Tech Stack
-  ### 🔧 Backend / RAG
-  ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
-  ![Flask](https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white)
-  ![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?style=for-the-badge)
-  ![OpenAI](https://img.shields.io/badge/OpenAI_API-412991?style=for-the-badge&logo=openai&logoColor=white)
-  
-  ### 🧠 Vector Search
-  ![ChromaDB](https://img.shields.io/badge/ChromaDB-FF6F61?style=for-the-badge)
-  ![OpenAI Embedding](https://img.shields.io/badge/OpenAI_Embedding-412991?style=for-the-badge&logo=openai&logoColor=white)
-  
-  ### 💾 Database
-  ![ChromaDB](https://img.shields.io/badge/ChromaDB-FF6F61?style=for-the-badge)
-  
-  ### 🖥️ Frontend
-  ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
-  
-  ### ⚙️ Dev Environment
-  ![venv](https://img.shields.io/badge/venv-181717?style=for-the-badge&logo=python&logoColor=white)
-  ![Git](https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white)
-  ![VS Code](https://img.shields.io/badge/VS_Code-007ACC?style=for-the-badge&logo=visualstudiocode&logoColor=white)
+  ```mermaid
+sequenceDiagram
+    participant U as 사용자
+    participant API as Flask API
+    participant DB as SQLite
+    participant RAG as RAG Chain
+    participant VDB as ChromaDB
+    participant LLM as OpenAI
+    
+    U->>API: 메시지 전송
+    API->>DB: 메시지 저장 (chat_messages)
+    API->>RAG: 질의 전달
+    RAG->>VDB: 유사 상담 검색
+    VDB-->>RAG: 관련 단락 반환
+    RAG->>LLM: 컨텍스트 + 질문
+    LLM-->>RAG: 응답 생성
+    RAG-->>API: 응답 반환
+    API->>DB: 응답 저장
+    API-->>U: 응답 표시
+```
+
+<br>
+
+## 🛠 Tech Stack
+
+### 🔧 Backend / RAG
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white)
+![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?style=for-the-badge)
+![OpenAI](https://img.shields.io/badge/OpenAI_API-412991?style=for-the-badge&logo=openai&logoColor=white)
+
+### 🧠 Vector Search & Database
+![ChromaDB](https://img.shields.io/badge/ChromaDB-FF6F61?style=for-the-badge)
+![SQLite3](https://img.shields.io/badge/SQLite3-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
+![OpenAI Embedding](https://img.shields.io/badge/OpenAI_Embedding-412991?style=for-the-badge&logo=openai&logoColor=white)
+
+### 🖥️ Frontend
+![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
+![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
+
+### ⚙️ Dev Environment
+![venv](https://img.shields.io/badge/venv-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Anti-Gravity](https://img.shields.io/badge/Anti--Gravity-FF69B4?style=for-the-badge&logo=python&logoColor=white)
+![Git](https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white)
+![VS Code](https://img.shields.io/badge/VS_Code-007ACC?style=for-the-badge&logo=visualstudiocode&logoColor=white)
+
 
 <br>
 
