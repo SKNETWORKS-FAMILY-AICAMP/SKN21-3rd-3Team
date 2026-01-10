@@ -68,8 +68,8 @@
     <h3 style="margin: 10px 0 5px 0;">우재현</h3>
     <div>
       <p style="margin: 0; font-size: 13px; line-height: 1.4;"> 
-      프롬프트 설계 <br/> 
-      Answer/Chain 구현
+      RAG 로직 설계/구현 <br/> 
+      History-to-PDF 변환 <br/>
       </p>
     </div>
     <a href="https://github.com/Wjaehyun">
@@ -86,7 +86,7 @@
     <div>
       <p style="margin: 0; font-size: 13px; line-height: 1.4;"> 
       데이터 수집 <br/>
-      프롬프트 개선
+      prompt 개선
       </p>
     </div>
     <a href="https://github.com/krsjlee">
@@ -120,7 +120,7 @@
     <div>
       <p style="margin: 0; font-size: 13px; line-height: 1.4;"> 
       Retriever 구현 <br/>
-      Vector DB 검색
+      prompt 개선, 테스트 <br/>
       </p>
     </div>
     <a href="https://github.com/whskadnd">
