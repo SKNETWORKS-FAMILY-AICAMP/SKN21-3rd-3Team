@@ -298,7 +298,7 @@ SKN21-3rd-3Team/
 │    └── static/                    # 정적 파일
 |
 ├── config/                        # 설정 파일
-├── docs/                          # 설계 문서 및 가이드
+├── docs/                          # 산출물, 설계 문서 및 가이드
 ├── images/                        # README / 발표용 이미지
 ├── tests/                         # 테스트 코드
 │
